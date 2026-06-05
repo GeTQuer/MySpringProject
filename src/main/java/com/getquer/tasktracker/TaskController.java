@@ -3,8 +3,9 @@ package com.getquer.tasktracker;
 import com.getquer.tasktracker.request.EmployeeSearchRequest;
 import com.getquer.tasktracker.request.StatusUpdateRequest;
 import com.getquer.tasktracker.request.TaskCreateRequest;
+import org.springframework.scheduling.config.Task;
 import org.springframework.web.bind.annotation.*;
-
+import jakarta.validation.Valid;
 import java.util.List;
 
 @RestController
@@ -18,16 +19,19 @@ public class TaskController {
     }
 
     @PostMapping // Метод для создания задачи
-    public TaskDTO createTask(@RequestBody TaskCreateRequest request) {
+    public TaskDTO createTask(@Valid @RequestBody TaskCreateRequest request) {
         return taskService.createTask(request.content(), request.name());
     }
     @GetMapping // Метод для получения списка задач
-    public List<TaskDTO> getAllTasks() {
+    public List<TaskDTO> getAllTasks(@RequestParam(value = "status",required = false) TaskStatus status) {
+        if (status != null){
+            return taskService.getAllTasksByStatus(status);
+        }
         return taskService.getAllTasks();
     }
 
     @PostMapping("/by-employee")
-    public List<TaskDTO> getAllTasksByEmployee(@RequestBody EmployeeSearchRequest employeeSearchRequest)
+    public List<TaskDTO> getAllTasksByEmployee(@Valid @RequestBody EmployeeSearchRequest employeeSearchRequest)
     {
         return taskService.getAllTasksByEmployee(employeeSearchRequest.fullNameEmployee());
     }
@@ -42,4 +46,10 @@ public class TaskController {
     {
         return taskService.deleteById(id);
     }
+
+    @GetMapping("/{id}")
+    public TaskDTO getTaskByID(@PathVariable("id") Long id){
+        return taskService.getTaskByID(id);
+    }
+
 }

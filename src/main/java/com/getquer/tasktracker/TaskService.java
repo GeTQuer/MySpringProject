@@ -1,11 +1,11 @@
 package com.getquer.tasktracker;
 
 import jakarta.persistence.EntityNotFoundException;
-import org.springframework.jdbc.core.JdbcOperations;
 import org.springframework.scheduling.config.Task;
 import org.springframework.stereotype.Service;
+
+import java.util.ArrayList;
 import java.util.List;
-import org.springframework.jdbc.core.JdbcTemplate;
 
 @Service
 public class TaskService {
@@ -50,7 +50,21 @@ public class TaskService {
 
         return mapToDTO(taskRepository.save(task));
     }
+    public TaskDTO getTaskByID(Long id){
+        TaskEntity task = taskRepository.findById(id).orElseThrow(
+                ()->new EntityNotFoundException("Not task with id = " + id));
+        return mapToDTO(task);
+    }
+    public List<TaskDTO> getAllTasksByStatus(TaskStatus status){
+        List<TaskEntity>tasks = taskRepository.findByStatus(status);
+        List<TaskDTO> dtos = new ArrayList<>();
 
+        for (int i = 0; i < tasks.size();i++){
+            TaskEntity task = tasks.get(i);
+            dtos.add(mapToDTO(task));
+        }
+        return dtos;
+    }
     private TaskDTO mapToDTO(TaskEntity taskEntity){
         return new TaskDTO(
                 taskEntity.getId(),
@@ -59,4 +73,5 @@ public class TaskService {
                 taskEntity.getStatus()
         );
     }
+
 }

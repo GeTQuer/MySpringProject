@@ -10,4 +10,5 @@ import java.util.List;
 public interface TaskRepository extends JpaRepository<TaskEntity, Long>
 {
     public List<TaskEntity>findByFullNameEmployee(String name);
+    List<TaskEntity> findByStatus(TaskStatus status);
 }
