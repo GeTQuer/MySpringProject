@@ -1,11 +1,7 @@
-package com.getquer.tasktracker;
+package com.getquer.tasktracker.Entities;
 
+import com.getquer.tasktracker.TaskStatus;
 import jakarta.persistence.*;
-import org.springframework.scheduling.config.Task;
-import lombok.Getter;
-import lombok.Setter;
-import lombok.NoArgsConstructor;
-import lombok.AllArgsConstructor;
 
 import java.time.LocalDateTime;
 

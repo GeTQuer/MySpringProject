@@ -1,8 +1,8 @@
 package com.getquer.tasktracker.service;
 
 import com.getquer.tasktracker.TaskDTO;
-import com.getquer.tasktracker.TaskEntity;
-import com.getquer.tasktracker.TaskRepository;
+import com.getquer.tasktracker.Entities.TaskEntity;
+import com.getquer.tasktracker.Repositories.TaskRepository;
 import com.getquer.tasktracker.TaskStatus;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.stereotype.Service;
