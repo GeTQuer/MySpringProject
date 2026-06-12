@@ -2,9 +2,18 @@ package com.getquer.tasktracker;
 
 import jakarta.persistence.*;
 import org.springframework.scheduling.config.Task;
+import lombok.Getter;
+import lombok.Setter;
+import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
+
+import java.time.LocalDateTime;
 
 
 @Entity
+
+@Table(name = "tasks")
+
 public class TaskEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -30,43 +39,45 @@ public class TaskEntity {
         this.createdAt = java.time.LocalDateTime.now();
     }
 
-    public java.time.LocalDateTime getCreatedAt() {
-        return createdAt;
-    }
+    public TaskEntity() {}
 
-    public Long getId()
-    {
+    public Long getId() {
         return id;
     }
-    public void setId(Long id)
-    {
+
+    public void setId(Long id) {
         this.id = id;
     }
 
-
-    public void setContent(String content)
-    {
-        this.content = content;
-    }
-    public String getContent(){
+    public String getContent() {
         return content;
     }
 
-
-    public void setEmployee(String name){
-        this.fullNameEmployee = name;
-    }
-    public String getEmployee(){
-        return this.fullNameEmployee;
+    public void setContent(String content) {
+        this.content = content;
     }
 
-    public TaskStatus getStatus(){
-        return this.status;
+    public String getFullNameEmployee() {
+        return fullNameEmployee;
     }
-    public void setStatus(TaskStatus status)
-    {
+
+    public void setFullNameEmployee(String fullNameEmployee) {
+        this.fullNameEmployee = fullNameEmployee;
+    }
+
+    public TaskStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(TaskStatus status) {
         this.status = status;
     }
 
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
 
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
 }

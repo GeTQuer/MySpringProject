@@ -1,26 +1,25 @@
-package com.getquer.tasktracker;
+package com.getquer.tasktracker.service;
 
+import com.getquer.tasktracker.TaskDTO;
+import com.getquer.tasktracker.TaskEntity;
+import com.getquer.tasktracker.TaskRepository;
+import com.getquer.tasktracker.TaskStatus;
 import jakarta.persistence.EntityNotFoundException;
-import org.springframework.scheduling.config.Task;
 import org.springframework.stereotype.Service;
-
 import java.util.ArrayList;
 import java.util.List;
 
 @Service
 public class TaskService {
     private final TaskRepository taskRepository;
-
-    public TaskService(TaskRepository taskRepository)
-    {
+    public TaskService(TaskRepository taskRepository) {
         this.taskRepository = taskRepository;
-
     }
-    public TaskDTO createTask(String content,String name)
+    public TaskDTO createTask(String content, String name)
     {
         TaskEntity newTask = new TaskEntity();
         newTask.setContent(content);
-        newTask.setEmployee(name);
+        newTask.setFullNameEmployee(name);
         newTask.setStatus(TaskStatus.OPEN);
         TaskEntity savedTask = taskRepository.save(newTask);
         return mapToDTO(savedTask);
@@ -69,7 +68,7 @@ public class TaskService {
         return new TaskDTO(
                 taskEntity.getId(),
                 taskEntity.getContent(),
-                taskEntity.getEmployee(),
+                taskEntity.getFullNameEmployee(),
                 taskEntity.getStatus()
         );
     }

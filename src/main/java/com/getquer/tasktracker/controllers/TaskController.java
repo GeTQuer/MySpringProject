@@ -1,9 +1,11 @@
-package com.getquer.tasktracker;
+package com.getquer.tasktracker.controllers;
 
+import com.getquer.tasktracker.TaskDTO;
+import com.getquer.tasktracker.service.TaskService;
+import com.getquer.tasktracker.TaskStatus;
 import com.getquer.tasktracker.request.EmployeeSearchRequest;
 import com.getquer.tasktracker.request.StatusUpdateRequest;
 import com.getquer.tasktracker.request.TaskCreateRequest;
-import org.springframework.scheduling.config.Task;
 import org.springframework.web.bind.annotation.*;
 import jakarta.validation.Valid;
 import java.util.List;
