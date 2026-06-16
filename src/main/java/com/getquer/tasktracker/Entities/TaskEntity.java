@@ -7,7 +7,6 @@ import java.time.LocalDateTime;
 
 
 @Entity
-
 @Table(name = "tasks")
 
 public class TaskEntity {
@@ -39,6 +38,18 @@ public class TaskEntity {
 
     public Long getId() {
         return id;
+    }
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id",nullable = false)
+    private UserEntity user;
+
+    public UserEntity getUser() {
+        return user;
+    }
+
+    public void setUser(UserEntity user) {
+        this.user = user;
     }
 
     public void setId(Long id) {
