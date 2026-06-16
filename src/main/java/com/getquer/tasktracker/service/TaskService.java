@@ -77,7 +77,7 @@ public class TaskService {
 
     public String deleteById(Long id,String username)
     {
-        TaskEntity task = taskRepository.findByIdAndUsername(id,username).orElseThrow(
+        TaskEntity task = taskRepository.findByIdAndUserUsername(id,username).orElseThrow(
                 ()-> new EntityNotFoundException("Not task with id = " + id)
         );
         taskRepository.delete(task);
@@ -85,13 +85,13 @@ public class TaskService {
     }
 
     public TaskDTO updatedStatus(Long id,TaskStatus newStatus,String username){
-        TaskEntity task = taskRepository.findByIdAndUsername(id,username)
+        TaskEntity task = taskRepository.findByIdAndUserUsername(id,username)
                 .orElseThrow(()-> new EntityNotFoundException("Not task with id = " + id));
         task.setStatus(newStatus);
         return mapToDTO(taskRepository.save(task));
     }
     public TaskDTO getTaskByID(Long id,String username){
-        TaskEntity task = taskRepository.findByIdAndUsername(id,username)
+        TaskEntity task = taskRepository.findByIdAndUserUsername(id,username)
                 .orElseThrow(() -> new EntityNotFoundException("Not task with id = " + id));
         return mapToDTO(task);
     }

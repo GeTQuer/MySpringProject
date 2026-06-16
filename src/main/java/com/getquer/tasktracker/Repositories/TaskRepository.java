@@ -14,7 +14,10 @@ import java.util.Optional;
 public interface TaskRepository extends JpaRepository<TaskEntity, Long>
 {
     List<TaskEntity> findAllByUserUsernameAndStatus(String username, TaskStatus status);
+
     List<TaskEntity> findAllByUserUsername(String username);
+
     List<TaskEntity> findAllByStatus(TaskStatus status);
-    Optional<TaskEntity> findByIdAndUsername(Long id, String username);
+
+    Optional<TaskEntity> findByIdAndUserUsername(Long id, String username);
 }
