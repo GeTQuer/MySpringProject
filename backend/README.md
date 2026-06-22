@@ -39,22 +39,22 @@
 * Maven
 * Установленный сервер PostgreSQL
 
-### Установка и запуск
+##Установка и запуск
 1. Склонируйте репозиторий:
-   ```bash
-   git clone [https://github.com/your-username/your-repo-name.git](https://github.com/your-username/your-repo-name.git)
-2. Настройте подключение к базе данных в файле `src/main/resources/application.properties`:
+   ```
+   git clone https://github.com/GeTQuer/MySpringProject.git
+2. Настройте подключение к базе данных в файле src/main/resources/application.properties:
    ```properties
    spring.datasource.url=jdbc:postgresql://localhost:5432/tasktracker
    spring.datasource.username=your_user
    spring.datasource.password=your_password
-3.Соберите и запустите приложение:
-  ```bash
-     mvn clean install
-     mvn spring-boot:run
-4.Откройте интерфейс в браузере:
-   ```
-       http://localhost:8080/login
+3. Соберите и запустите приложение:
+   ```bash
+   mvn clean install
+   mvn spring-boot:run
+4. Откройте интерфейс в браузере
+   ```bash
+   http://localhost:8080/login
 📄 Документация API
 В проект интегрирован Swagger UI для прямого тестирования эндпоинтов в обход визуального интерфейса.
 После запуска приложения документация доступна по адресу:
