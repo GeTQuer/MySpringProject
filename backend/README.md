@@ -52,21 +52,19 @@
 ```text
 src/main/java/com/getquer/tasktracker
 ├── controller
-
+|
 ├── service
-
+|
 ├── repository
-
+|
 ├── entity
-
+|
 ├── dto
-
+|
 ├── security
-
+|
 └── config
 ```
-## Схема БД
-
 ## Схема БД
 
 ```mermaid
