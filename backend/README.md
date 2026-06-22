@@ -59,8 +59,8 @@ src/main/java/com/getquer/tasktracker
 └── config
 
 Схема БД
-User
 
+User
 ├─ id (Long)
 ├─ username (String)
 ├─ password (String)
@@ -72,7 +72,6 @@ Task
 ├─ fullNameEmployee (String)
 ├─ status (String)
 └─ user_id (Long, FK)
-
 🛠 Стек технологий
 
 Java 17+
