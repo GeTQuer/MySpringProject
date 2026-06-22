@@ -52,28 +52,41 @@
 ```text
 src/main/java/com/getquer/tasktracker
 ├── controller
+
 ├── service
+
 ├── repository
+
 ├── entity
+
 ├── dto
+
 ├── security
+
 └── config
 ```
 ## Схема БД
 
-```text
-User
-├─ id (Long)
-├─ username (String)
-├─ password (String)
-└─ role (String)
+## Схема БД
 
-Task
-├─ id (Long)
-├─ content (String)
-├─ fullNameEmployee (String)
-├─ status (String)
-└─ user_id (Long, FK)
+```mermaid
+erDiagram
+    USER ||--o{ TASK : owns
+
+    USER {
+        Long id
+        String username
+        String password
+        String role
+    }
+
+    TASK {
+        Long id
+        String content
+        String fullNameEmployee
+        String status
+        Long user_id
+    }
 ```
 
 🛠 Стек технологий
