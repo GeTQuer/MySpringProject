@@ -1,4 +1,4 @@
-Корпоративный Трекер Задач (Task Tracker)
+# Корпоративный Трекер Задач (Task Tracker)
 
 Надежная система управления задачами с упором на безопасность, строгую изоляцию данных и лучшие практики проектирования REST API. Проект представляет собой монолит на Spring Boot с интегрированным фронтендом на чистом JavaScript (Vanilla JS).
 
@@ -87,20 +87,22 @@ erDiagram
     }
 ```
 
-🛠 Стек технологий
+## 🛠 Стек технологий
 
-Java 17+
+### Backend
 
-Spring Boot (Web, Data JPA, Security)
+- Java 17+
+- Spring Boot (Web, Data JPA, Security)
+- PostgreSQL
+- Hibernate
+- Maven
 
-PostgreSQL
+### Frontend
 
-Hibernate
-
-Maven
-
-HTML5, CSS3, Bootstrap 5, Vanilla JS (Fetch API)
-
+- HTML5
+- CSS3
+- Bootstrap 5
+- Vanilla JavaScript (Fetch API)
 
 🚀 Быстрый старт
 
@@ -133,7 +135,7 @@ Maven
    ```
    
 4. Откройте интерфейс в браузере
-   ```bash
+   ```text
    http://localhost:8080/login
    ```
    
