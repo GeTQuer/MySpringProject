@@ -47,8 +47,9 @@
 
 - Слой данных: Бизнес-логика инкапсулирована в TaskService, который взаимодействует с базой через интерфейсы JpaRepository.
 
-Структура проекта
+## Структура проекта
 
+```text
 src/main/java/com/getquer/tasktracker
 ├── controller
 ├── service
@@ -57,9 +58,10 @@ src/main/java/com/getquer/tasktracker
 ├── dto
 ├── security
 └── config
+```
+## Схема БД
 
-Схема БД
-
+```text
 User
 ├─ id (Long)
 ├─ username (String)
@@ -72,6 +74,8 @@ Task
 ├─ fullNameEmployee (String)
 ├─ status (String)
 └─ user_id (Long, FK)
+```
+
 🛠 Стек технологий
 
 Java 17+
