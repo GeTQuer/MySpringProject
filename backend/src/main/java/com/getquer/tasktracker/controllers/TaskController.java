@@ -1,5 +1,6 @@
 package com.getquer.tasktracker.controllers;
 
+import com.getquer.tasktracker.Entities.TaskEntity;
 import com.getquer.tasktracker.Repositories.UserRepository;
 import com.getquer.tasktracker.TaskDTO;
 import com.getquer.tasktracker.service.TaskService;
@@ -53,24 +54,28 @@ public class TaskController {
         return ResponseEntity.ok(taskService.getAllTasks(username));
     }
 
-    @PutMapping("/{id}/status")
-    public TaskDTO taskDone(@PathVariable("id")Long id,@RequestBody StatusUpdateRequest request,
-                            Authentication authentication){
-        String username = authentication.getName();
-        return taskService.updatedStatus(id,request.status(),username);
-    }
 
     @DeleteMapping("/{id}")
-    public String deleteById(@PathVariable("id") Long id, Authentication authentication)
+    public ResponseEntity<Void> deleteById(@PathVariable("id") Long id, Authentication authentication)
     {
         String username = authentication.getName();
-        return taskService.deleteById(id,username);
+        taskService.deleteById(id,username);
+        return ResponseEntity.ok().build();
     }
 
     @GetMapping("/{id}")
-    public TaskDTO getTaskByID(@PathVariable("id") Long id, Authentication authentication){
+    public ResponseEntity<TaskDTO> getTaskByID(@PathVariable("id") Long id, Authentication authentication){
         String username = authentication.getName();
-        return taskService.getTaskByID(id,username);
+        return ResponseEntity.ok(taskService.getTaskByID(id,username));
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<TaskEntity> updateTask(@PathVariable("id") Long id,
+                                                 @RequestBody TaskEntity updateData,
+                                                 Authentication authentication){
+        String username = authentication.getName();
+        TaskEntity savedTask = taskService.updatedData(id,updateData,username);
+        return ResponseEntity.ok(savedTask);
     }
 
 }

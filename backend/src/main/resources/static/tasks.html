@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Мои задачи</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+<div class="container mt-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Список задач</h2>
+        <button class="btn btn-success shadow-sm" data-bs-toggle="modal" data-bs-target="#addTaskModal">
+            + Добавить задачу
+        </button>
+    </div>
+
+    <div class="row mb-4 bg-white p-3 rounded shadow-sm border mx-0">
+        <div class="col-md-4">
+            <label class="form-label small text-muted">Поиск по описанию</label>
+            <input type="text" id="searchInput" class="form-control" placeholder="Введите текст...">
+        </div>
+        <div class="col-md-3">
+            <label class="form-label small text-muted">Фильтр по статусу</label>
+            <select id="statusFilter" class="form-select">
+                <option value="ALL">Все статусы</option>
+                <option value="OPEN">OPEN</option>
+                <option value="IN_PROGRESS">IN_PROGRESS</option>
+                <option value="DONE">DONE</option>
+                <option value="CANCELLED">CANCELLED</option>
+            </select>
+        </div>
+        <div class="col-md-5 border-start">
+            <label class="form-label small text-muted">Быстрое удаление</label>
+            <div class="input-group">
+                <input type="number" id="deleteIdInput" class="form-control" placeholder="Введите ID задачи">
+                <button class="btn btn-danger" id="deleteByIdBtn">Удалить</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow">
+        <div class="card-body">
+            <table class="table align-middle" id="tasksTable">
+                <thead class="table-dark">
+                <tr>
+                    <th>ID</th>
+                    <th>Описание</th>
+                    <th>Сотрудник</th>
+                    <th>Статус</th>
+                    <th>Действия</th>
+                </tr>
+                </thead>
+                <tbody id="tasksBody">
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="addTaskModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Новая задача</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="createTaskForm">
+                    <div class="mb-3">
+                        <label class="form-label">Описание задачи</label>
+                        <input type="text" class="form-control" id="taskContent" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Сотрудник</label>
+                        <input type="text" class="form-control" id="taskEmployee" required>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                <button type="button" class="btn btn-primary" id="saveTaskBtn">Сохранить</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="editTaskModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Редактирование задачи № <span id="editTaskIdLabel"></span></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editTaskForm">
+                    <input type="hidden" id="editTaskId">
+
+                    <div class="mb-3">
+                        <label class="form-label">Описание задачи</label>
+                        <input type="text" class="form-control" id="editTaskContent" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Сотрудник</label>
+                        <input type="text" class="form-control" id="editTaskEmployee" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Статус</label>
+                        <select class="form-select" id="editTaskStatus">
+                            <option value="OPEN">OPEN</option>
+                            <option value="IN_PROGRESS">IN_PROGRESS</option>
+                            <option value="DONE">DONE</option>
+                            <option value="CANCELLED">CANCELLED</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                <button type="button" class="btn btn-primary" id="updateTaskBtn">Изменить</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+    const token = localStorage.getItem('jwt_token');
+    if (!token) window.location.href = '/login';
+
+    // Переменная для хранения ссылки на строку, которую редактируем в данный момент
+    let currentRowElement = null;
+
+    document.addEventListener('DOMContentLoaded', loadTasks);
+
+    // --- GET: Загрузка задач ---
+    async function loadTasks() {
+        const response = await fetch('/api/tasks', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        if (response.ok) {
+            const tasks = await response.json();
+            const tbody = document.getElementById('tasksBody');
+            tbody.innerHTML = '';
+            tasks.forEach(task => addRowToTable(task));
+        } else {
+            localStorage.removeItem('jwt_token');
+            window.location.href = '/login';
+        }
+    }
+
+    // Отрисовка строки таблицы
+    function addRowToTable(task) {
+        const tbody = document.getElementById('tasksBody');
+        const tr = document.createElement('tr');
+
+        // Здесь добавлены классы для ячеек и синяя кнопка "Редактировать"
+        tr.innerHTML = `
+                <td class="task-id">${task.id}</td>
+                <td class="task-content">${task.content}</td>
+                <td class="task-employee">${task.fullNameEmployee}</td>
+                <td class="task-status"><span class="badge bg-primary">${task.status}</span></td>
+                <td>
+                    <button class="btn btn-sm btn-primary me-1" onclick="openEditModal(${task.id}, this)">Редактировать</button>
+                    <button class="btn btn-sm btn-danger" onclick="deleteTask(${task.id}, this)">Удалить</button>
+                </td>
+            `;
+        tbody.appendChild(tr);
+    }
+
+    // --- POST: Создание задачи ---
+    document.getElementById('saveTaskBtn').addEventListener('click', async () => {
+        const payload = {
+            content: document.getElementById('taskContent').value,
+            fullNameEmployee: document.getElementById('taskEmployee').value,
+            status: "OPEN"
+        };
+
+        const response = await fetch('/api/tasks', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(payload)
+        });
+
+        if (response.ok) {
+            const newTask = await response.json();
+            addRowToTable(newTask);
+            bootstrap.Modal.getInstance(document.getElementById('addTaskModal')).hide();
+            document.getElementById('createTaskForm').reset();
+        } else {
+            alert("Ошибка при сохранении задачи");
+        }
+    });
+
+    // --- DELETE: Удаление по кнопке в строке ---
+    async function deleteTask(taskId, btnElement) {
+        if (!confirm("Точно удалить?")) return;
+
+        const response = await fetch(`/api/tasks/${taskId}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        if (response.ok) {
+            btnElement.closest('tr').remove();
+        } else {
+            alert("Ошибка при удалении задачи");
+        }
+    }
+
+    // --- PUT: Логика редактирования ---
+
+    // Функция предзаполнения полей формы при клике на "Редактировать"
+    function openEditModal(taskId, btnElement) {
+        currentRowElement = btnElement.closest('tr');
+
+        // Считываем текст из выбранной строки HTML
+        const currentContent = currentRowElement.querySelector('.task-content').textContent;
+        const currentEmployee = currentRowElement.querySelector('.task-employee').textContent;
+        const currentStatus = currentRowElement.querySelector('.task-status').textContent;
+
+        // Записываем данные в поля модального окна
+        document.getElementById('editTaskId').value = taskId;
+        document.getElementById('editTaskIdLabel').textContent = taskId;
+        document.getElementById('editTaskContent').value = currentContent;
+        document.getElementById('editTaskEmployee').value = currentEmployee;
+        document.getElementById('editTaskStatus').value = currentStatus;
+
+        // Отображаем модальное окно
+        const editModal = new bootstrap.Modal(document.getElementById('editTaskModal'));
+        editModal.show();
+    }
+
+    // Отправка PUT запроса при нажатии "Изменить" в модальном окне
+    document.getElementById('updateTaskBtn').addEventListener('click', async () => {
+        const taskId = document.getElementById('editTaskId').value;
+
+        const payload = {
+            content: document.getElementById('editTaskContent').value,
+            fullNameEmployee: document.getElementById('editTaskEmployee').value,
+            status: document.getElementById('editTaskStatus').value
+        };
+
+        const response = await fetch(`/api/tasks/${taskId}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(payload)
+        });
+
+        if (response.ok) {
+            const updatedTask = await response.json();
+
+            // Обновляем текст в строке таблицы без перезагрузки всей страницы
+            currentRowElement.querySelector('.task-content').textContent = updatedTask.content;
+            currentRowElement.querySelector('.task-employee').textContent = updatedTask.fullNameEmployee;
+            currentRowElement.querySelector('.task-status').innerHTML = `<span class="badge bg-primary">${updatedTask.status}</span>`;
+
+            // Скрываем окно
+            bootstrap.Modal.getInstance(document.getElementById('editTaskModal')).hide();
+        } else {
+            alert("Ошибка при обновлении задачи");
+        }
+    });
+
+    // --- ФИЛЬТРАЦИЯ ---
+    function filterTable() {
+        const searchText = document.getElementById('searchInput').value.toLowerCase();
+        const statusFilter = document.getElementById('statusFilter').value;
+        const rows = document.querySelectorAll('#tasksBody tr');
+
+        rows.forEach(row => {
+            const content = row.querySelector('.task-content').textContent.toLowerCase();
+            const status = row.querySelector('.task-status').textContent;
+
+            const matchesText = content.includes(searchText);
+            const matchesStatus = (statusFilter === 'ALL') || (status === statusFilter);
+
+            if (matchesText && matchesStatus) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        });
+    }
+
+    document.getElementById('searchInput').addEventListener('input', filterTable);
+    document.getElementById('statusFilter').addEventListener('change', filterTable);
+
+    // --- УДАЛЕНИЕ ПО ID ИЗ ПОЛЯ ВВОДА ---
+    document.getElementById('deleteByIdBtn').addEventListener('click', async () => {
+        const idInput = document.getElementById('deleteIdInput');
+        const taskId = idInput.value.trim();
+
+        if (!taskId) {
+            alert("Введите ID для удаления!");
+            return;
+        }
+
+        if (!confirm(`Вы уверены, что хотите удалить задачу с ID ${taskId}?`)) return;
+
+        const response = await fetch(`/api/tasks/${taskId}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        if (response.ok) {
+            const rows = document.querySelectorAll('#tasksBody tr');
+            rows.forEach(row => {
+                if (row.querySelector('.task-id').textContent === taskId) {
+                    row.remove();
+                }
+            });
+            idInput.value = '';
+            alert(`Задача ${taskId} успешно удалена.`);
+        } else {
+            alert("Ошибка! Возможно, задачи с таким ID не существует.");
+        }
+    });
+</script>
+</body>
+</html>

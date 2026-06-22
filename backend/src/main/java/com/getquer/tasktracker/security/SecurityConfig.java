@@ -38,8 +38,12 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
+                                "/login",
+                                "/tasks",
+                                "/login.html",
+                                "/tasks.html",
                                 "/api/auth/**",
-                                "/v3/api-docs",      // <-- Добавили точный путь без слеша
+                                "/v3/api-docs",
                                 "/v3/api-docs/**",
                                 "/swagger-ui/**",
                                 "/swagger-ui.html",
