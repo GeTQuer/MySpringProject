@@ -29,6 +29,9 @@ public class TaskEntity {
     @Column(name = "created_at")
     private java.time.LocalDateTime createdAt;
 
+    @Column(name = "deadline")
+    private LocalDateTime deadline;
+
     @PrePersist
     protected void onCreate() {
         this.createdAt = java.time.LocalDateTime.now();
@@ -86,5 +89,13 @@ public class TaskEntity {
 
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public LocalDateTime getDeadline() {
+        return deadline;
+    }
+
+    public void setDeadline(LocalDateTime deadline) {
+        this.deadline = deadline;
     }
 }

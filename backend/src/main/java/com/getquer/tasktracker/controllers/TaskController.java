@@ -70,11 +70,11 @@ public class TaskController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<TaskEntity> updateTask(@PathVariable("id") Long id,
-                                                 @RequestBody TaskEntity updateData,
+    public ResponseEntity<TaskDTO> updateTask(@PathVariable("id") Long id,
+                                                 @RequestBody TaskDTO updateData,
                                                  Authentication authentication){
         String username = authentication.getName();
-        TaskEntity savedTask = taskService.updatedData(id,updateData,username);
+        TaskDTO savedTask = taskService.updatedData(id,updateData,username);
         return ResponseEntity.ok(savedTask);
     }
 

@@ -7,7 +7,6 @@ import com.getquer.tasktracker.Entities.TaskEntity;
 import com.getquer.tasktracker.Repositories.TaskRepository;
 import com.getquer.tasktracker.TaskStatus;
 import jakarta.persistence.EntityNotFoundException;
-import org.springframework.scheduling.config.Task;
 import org.springframework.stereotype.Service;
 import java.util.ArrayList;
 import java.util.List;
@@ -27,7 +26,7 @@ public class TaskService {
         TaskEntity newTask = new TaskEntity();
         newTask.setContent(taskDTO.content());
         newTask.setFullNameEmployee(taskDTO.fullNameEmployee());
-        newTask.setStatus(taskDTO.status());
+        newTask.setStatus(TaskStatus.valueOf(taskDTO.status()));
         newTask.setUser(user);
         TaskEntity savedTask = taskRepository.save(newTask);
         return mapToDTO(savedTask);
@@ -36,24 +35,23 @@ public class TaskService {
     public List<TaskDTO> getAllTaskGlobally(){
         List<TaskEntity> tasks = taskRepository.findAll();
         List<TaskDTO> dtos = new ArrayList<>();
-        for (int i = 0; i < tasks.size(); i++) {
-            dtos.add(mapToDTO(tasks.get(i)));
+        for (TaskEntity task : tasks) {
+            dtos.add(mapToDTO(task));
         }
         return dtos;
     }
     public List<TaskDTO> getAllTaskGloballyByStatus(TaskStatus status){
         List<TaskEntity> tasks = taskRepository.findAllByStatus(status);
         List<TaskDTO> dtos = new ArrayList<>();
-        for (int i = 0; i < tasks.size(); i++) {
-            dtos.add(mapToDTO(tasks.get(i)));
+        for (TaskEntity task : tasks) {
+            dtos.add(mapToDTO(task));
         }
         return dtos;
     }
     public List<TaskDTO> getAllTasks(String username) {
         List<TaskEntity> tasks = taskRepository.findAllByUserUsername(username);
         List<TaskDTO> dtos = new ArrayList<>();
-        for (int i = 0; i < tasks.size();i++){
-            TaskEntity task = tasks.get(i);
+        for (TaskEntity task : tasks) {
             dtos.add(mapToDTO(task));
         }
         return dtos;
@@ -64,8 +62,7 @@ public class TaskService {
                 username,status
         );
         List<TaskDTO> dtos = new ArrayList<>();
-        for (int i = 0; i < tasks.size(); i++){
-            TaskEntity task = tasks.get(i);
+        for (TaskEntity task : tasks) {
             dtos.add(mapToDTO(task));
         }
         return dtos;
@@ -84,13 +81,14 @@ public class TaskService {
     }
 
 
-    public TaskEntity updatedData(Long id,TaskEntity updateData, String username){
+    public TaskDTO updatedData(Long id,TaskDTO updateData, String username){
         TaskEntity task = taskRepository.findByIdAndUserUsername(id,username)
                 .orElseThrow(()-> new EntityNotFoundException("Task not foud with id = " + id));
-        task.setContent(updateData.getContent());
-        task.setStatus(updateData.getStatus());
-        task.setFullNameEmployee(updateData.getFullNameEmployee());
-        return taskRepository.save(task);
+        task.setContent(updateData.content());
+        task.setStatus(TaskStatus.valueOf(updateData.status()));
+        task.setFullNameEmployee(updateData.fullNameEmployee());
+        taskRepository.save(task);
+        return mapToDTO(task);
     }
     public TaskDTO getTaskByID(Long id,String username){
         TaskEntity task = taskRepository.findByIdAndUserUsername(id,username)
@@ -103,7 +101,7 @@ public class TaskService {
                 taskEntity.getId(),
                 taskEntity.getContent(),
                 taskEntity.getFullNameEmployee(),
-                taskEntity.getStatus()
+                taskEntity.getStatus().name()
         );
     }
 
