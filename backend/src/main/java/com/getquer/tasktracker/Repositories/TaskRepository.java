@@ -35,7 +35,7 @@ public interface TaskRepository extends JpaRepository<TaskEntity, Long>
 
     @Modifying
     @Transactional
-    @Query("DELETE FROM TaskEntity t WHERE t.stauts = 'OVERDUE '" +
+    @Query("DELETE FROM TaskEntity t WHERE t.status = 'OVERDUE '" +
             "AND t.deadline < :threseholDate")
     void deleteOldOverdueTasks(@Param("threseholDate") LocalDateTime threseholDate);
 

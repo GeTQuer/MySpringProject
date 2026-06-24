@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Регистрация</title>
+    <style>
+        body { font-family: sans-serif; display: flex; justify-content: center; padding-top: 50px; }
+        form { display: flex; flex-direction: column; gap: 10px; width: 300px; }
+    </style>
+</head>
+<body>
+
+<form id="registerForm">
+    <h2>Регистрация</h2>
+    <input type="text" id="username" placeholder="Логин" required>
+    <input type="password" id="password" placeholder="Пароль" required>
+    <button type="submit">Зарегистрироваться</button>
+    <p>Уже есть аккаунт? <a href="/login.html">Войти</a></p>
+</form>
+
+<script>
+    document.getElementById('registerForm').addEventListener('submit', async (e) => {
+        // 1. Останавливаем стандартную отправку формы (чтобы страница не перезагружалась)
+        e.preventDefault();
+
+        // 2. Собираем данные
+        const username = document.getElementById('username').value;
+        const password = document.getElementById('password').value;
+
+        try {
+            // 3. Отправляем POST запрос на наш API
+            const response = await fetch('/api/auth/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password })
+            });
+
+            // 4. Обрабатываем ответ
+            if (response.ok) {
+                alert("Успешная регистрация!");
+                // Перенаправляем пользователя на логин
+                window.location.href = '/login.html';
+            } else {
+                const errorText = await response.text();
+                alert("Ошибка: " + errorText);
+            }
+        } catch (err) {
+            console.error("Ошибка сети:", err);
+            alert("Не удалось связаться с сервером");
+        }
+    });
+</script>
+
+</body>
+</html>

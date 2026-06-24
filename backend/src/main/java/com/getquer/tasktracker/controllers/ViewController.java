@@ -15,5 +15,10 @@ public class ViewController {
     public String tasksPage() {
         return "tasks.html";
     }
-    
+
+    @GetMapping("/register")
+    public String registerPage() {
+        return "/register.html";
+    }
+
 }
