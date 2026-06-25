@@ -17,7 +17,7 @@
         .form-container {
             display: flex;
             flex-direction: column;
-            gap: 10px;
+            gap: 15px;
             width: 300px;
             background-color: #2d2d2d;
             padding: 20px;
@@ -29,6 +29,15 @@
             color: #4caf50;
             font-size: 24px;
             margin-top: 0;
+            margin-bottom: 10px;
+        }
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        label {
+            font-size: 14px;
         }
         input {
             padding: 10px;
@@ -37,6 +46,8 @@
             background-color: #3d3d3d;
             color: white;
             font-size: 16px;
+            width: 100%;
+            box-sizing: border-box;
         }
         button {
             padding: 10px;
@@ -47,6 +58,7 @@
             font-size: 16px;
             cursor: pointer;
             transition: background-color 0.3s;
+            width: 100%;
         }
         button:hover {
             background-color: #45a049;
@@ -64,15 +76,15 @@
     <div id="errorBox" class="alert d-none" role="alert"></div>
 
     <form id="loginForm">
-        <div class="mb-3">
+        <div class="form-group">
             <label>Логин</label>
-            <input type="text" id="username" class="form-control" required>
+            <input type="text" id="username" required>
         </div>
-        <div class="mb-3">
+        <div class="form-group">
             <label>Пароль</label>
-            <input type="password" id="password" class="form-control" required>
+            <input type="password" id="password" required>
         </div>
-        <button type="submit" class="btn btn-primary w-100">Войти</button>
+        <button type="submit">Войти</button>
     </form>
 </div>
 
