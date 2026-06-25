@@ -1,12 +1,13 @@
 package com.getquer.tasktracker.controllers;
 
-import com.getquer.tasktracker.Entities.TaskEntity;
+import com.getquer.tasktracker.DTOs.UserDTO;
+import com.getquer.tasktracker.Entities.UserEntity;
 import com.getquer.tasktracker.Repositories.UserRepository;
-import com.getquer.tasktracker.TaskDTO;
+import com.getquer.tasktracker.DTOs.TaskDTO;
 import com.getquer.tasktracker.service.TaskService;
 import com.getquer.tasktracker.TaskStatus;
-import com.getquer.tasktracker.request.StatusUpdateRequest;
-import com.getquer.tasktracker.request.TaskCreateRequest;
+import com.getquer.tasktracker.service.UserService;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -20,10 +21,12 @@ import java.util.List;
 public class TaskController {
     private final TaskService taskService;
     private final UserRepository userRepository;
+    private final UserService userService;
 
-    public TaskController(TaskService taskService, UserRepository userRepository) {
+    public TaskController(TaskService taskService, UserRepository userRepository, UserService userService) {
         this.taskService = taskService;
         this.userRepository = userRepository;
+        this.userService = userService;
     }
 
     @PostMapping
@@ -36,22 +39,31 @@ public class TaskController {
 
         return ResponseEntity.ok(createdTask);
     }
-    @GetMapping // Метод для получения списка задач
-    public ResponseEntity<List<TaskDTO>> getAllTasks(@RequestParam(value = "status",required = false) TaskStatus status,
-                                                     Authentication authentication) {
+
+
+    // 1. Эндпоинт только для сотрудников (видят только свои задачи)
+    @GetMapping("/my")
+    public ResponseEntity<List<TaskDTO>> getMyTasks(
+            @RequestParam(value = "status", required = false) TaskStatus status,
+            Authentication authentication) {
+
         String username = authentication.getName();
-        boolean isAdmin = authentication.getAuthorities().stream()
-                .anyMatch(role -> role.getAuthority().equals("ROLE_ADMIN"));
-        if (isAdmin) {
-            if (status != null) {
-                return ResponseEntity.ok(taskService.getAllTaskGloballyByStatus(status));
-            }
-            return ResponseEntity.ok(taskService.getAllTaskGlobally());
-        }
         if (status != null) {
             return ResponseEntity.ok(taskService.getAllTasksByStatus(username, status));
         }
         return ResponseEntity.ok(taskService.getAllTasks(username));
+    }
+
+    // 2. Эндпоинт только для админа(видит всё)
+    @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping("/all")
+    public ResponseEntity<List<TaskDTO>> getAllTasksGlobally(
+            @RequestParam(value = "status", required = false) TaskStatus status) {
+
+        if (status != null) {
+            return ResponseEntity.ok(taskService.getAllTaskGloballyByStatus(status));
+        }
+        return ResponseEntity.ok(taskService.getAllTaskGlobally());
     }
 
 

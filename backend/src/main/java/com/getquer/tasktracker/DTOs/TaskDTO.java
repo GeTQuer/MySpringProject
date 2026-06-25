@@ -1,4 +1,4 @@
-package com.getquer.tasktracker;
+package com.getquer.tasktracker.DTOs;
 
 public record TaskDTO (
         Long id,

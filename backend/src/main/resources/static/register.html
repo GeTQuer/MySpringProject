@@ -65,17 +65,17 @@
 </head>
 <body>
 
-<div class="form-container">
+<form class="form-container" id="registerForm">
     <h2>Регистрация</h2>
     <input type="text" id="username" placeholder="Логин" required>
     <input type="password" id="password" placeholder="Пароль" required>
     <button type="submit">Зарегистрироваться</button>
-    <a href="/login.html">Уже есть аккаунт? Войти</a>
-</div>
+    <a href="/login">Уже есть аккаунт? Войти</a>
+</form>
 
 <script>
     document.getElementById('registerForm').addEventListener('submit', async (e) => {
-        // 1. Останавливаем стандартную отправку формы (чтобы страница не перезагружалась)
+        // 1. Останавливаем стандартную перезагрузку страницы
         e.preventDefault();
 
         // 2. Собираем данные
@@ -93,8 +93,8 @@
             // 4. Обрабатываем ответ
             if (response.ok) {
                 alert("Успешная регистрация!");
-                // Перенаправляем пользователя на логин
-                window.location.href = '/login.html';
+                // Перенаправляем пользователя на страницу входа
+                window.location.href = '/login';
             } else {
                 const errorText = await response.text();
                 alert("Ошибка: " + errorText);

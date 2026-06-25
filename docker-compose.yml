@@ -3,7 +3,7 @@ services:
     image: postgres:15
     container_name: task-tracker-db
     environment:
-      # Здесь всё ок: берем из твоего локального .env и передаем в Postgres
+      # Берем из локального .env и передаем в Postgres
       POSTGRES_DB: ${DB_NAME}
       POSTGRES_USER: ${DB_USERNAME}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
@@ -12,7 +12,7 @@ services:
     ports:
       - "${DB_PORT}:5432"
     healthcheck:
-      # КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Используем $$ и внутренние переменные самого Postgres!
+      # Используем $$ и внутренние переменные самого Postgres
       test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 5s
       timeout: 3s
@@ -28,14 +28,15 @@ services:
         condition: service_healthy
     environment:
       # Пробрасываем переменные внутрь Spring Boot приложения
-      DB_HOST: database  # Внутри сети Docker хостом БД является имя её сервиса!
+      DB_HOST: database  # Внутри сети Docker хостом БД является имя её сервиса
       DB_NAME: ${DB_NAME}
       DB_USERNAME: ${DB_USERNAME}
       DB_PASSWORD: ${DB_PASSWORD}
-      DB_PORT: 5432      # Внутри контейнера порт всегда 5432, а не твой внешний ${DB_PORT}
+      DB_PORT: 5432      # Внутри контейнера порт всегда 5432, а не внешний ${DB_PORT}
     ports:
       - "8080:8080"
     restart: unless-stopped
 
+# Инициализируем именованный том для вечного хранения данных
 volumes:
-  postgres_data:
+  postgres_data: {}

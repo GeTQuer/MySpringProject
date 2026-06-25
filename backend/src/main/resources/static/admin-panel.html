@@ -1,0 +1,173 @@
+
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Панель администратора</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { font-family: Arial, sans-serif; }
+        .alert-container { min-height: 50px; }
+    </style>
+</head>
+<body class="bg-light">
+
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
+    <div class="container">
+        <a class="navbar-brand" href="#">Панель управления</a>
+        <div class="collapse navbar-collapse">
+            <div class="navbar-nav">
+                <a class="nav-link active" href="/admin">Пользователи и Роли</a>
+                <a class="nav-link" href="/tasks">Все Задачи</a>
+            </div>
+        </div>
+        <button class="btn btn-outline-light btn-sm" onclick="logout()">Выйти</button>
+    </div>
+</nav>
+
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2>Управление правами пользователей</h2>
+    </div>
+
+    <div class="alert-container">
+        <div id="statusMessage" class="alert d-none" role="alert"></div>
+    </div>
+
+    <div class="card shadow">
+        <div class="card-body p-0">
+            <table class="table table-hover align-middle mb-0" id="usersTable">
+                <thead class="table-dark">
+                <tr>
+                    <th style="width: 10%">ID</th>
+                    <th style="width: 40%">Логин (Username)</th>
+                    <th style="width: 25%">Текущая роль</th>
+                    <th style="width: 25%">Действия</th>
+                </tr>
+                </thead>
+                <tbody id="usersTableBody">
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+    // 1. Изменили ключ на 'jwt_token', чтобы он совпадал с логикой остальных страниц
+    const token = localStorage.getItem('jwt_token');
+
+    if (!token) {
+        window.location.href = '/login';
+    }
+
+    // Базовые заголовки для авторизованных запросов к REST API
+    const authHeaders = {
+        'Authorization': 'Bearer ' + token,
+        'Content-Type': 'application/json'
+    };
+
+    // Загружаем список при старте страницы
+    document.addEventListener('DOMContentLoaded', fetchUsers);
+
+    // Функция выхода из аккаунта
+    function logout() {
+        localStorage.removeItem('jwt_token');
+        window.location.href = '/login';
+    }
+
+    // --- GET: Получение всех пользователей ---
+    async function fetchUsers() {
+        try {
+            const response = await fetch('/roles', {
+                method: 'GET',
+                headers: authHeaders
+            });
+
+            // Если токен протух или у пользователя нет роли ADMIN — выбрасываем на логин
+            if (response.status === 401 || response.status === 403) {
+                logout();
+                return;
+            }
+
+            if (!response.ok) {
+                throw new Error('Не удалось загрузить пользователей. Ошибка сервера.');
+            }
+
+            const users = await response.json();
+            renderTable(users);
+        } catch (error) {
+            showStatus(error.message, 'danger');
+        }
+    }
+
+    // --- Отрисовка таблицы ---
+    function renderTable(users) {
+        const tbody = document.getElementById('usersTableBody');
+        tbody.innerHTML = '';
+
+        users.forEach(user => {
+            const tr = document.createElement('tr');
+
+            // Тернарные проверки внутри select корректно подсветят текущую роль, 
+            // даже если в DTO она записана без префикса (например, просто "USER")
+            tr.innerHTML = `
+                <td><strong class="text-muted">${user.id}</strong></td>
+                <td><strong>${user.username}</strong></td>
+                <td><span class="badge bg-secondary fs-6">${user.role}</span></td>
+                <td>
+                    <div class="input-group input-group-sm">
+                        <select class="form-select" id="role-select-${user.id}">
+                            <option value="ROLE_USER" ${user.role === 'ROLE_USER' || user.role === 'USER' ? 'selected' : ''}>Пользователь</option>
+                            <option value="ROLE_MANAGER" ${user.role === 'ROLE_MANAGER' || user.role === 'MANAGER' ? 'selected' : ''}>Руководитель</option>
+                            <option value="ROLE_ADMIN" ${user.role === 'ROLE_ADMIN' || user.role === 'ADMIN' ? 'selected' : ''}>Администратор</option>
+                        </select>
+                        <button class="btn btn-primary" onclick="upgradeRole(${user.id})">Сохранить</button>
+                    </div>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    // --- PUT: Обновление роли пользователя ---
+    async function upgradeRole(userId) {
+        const selectElement = document.getElementById(`role-select-${userId}`);
+        const newRoleValue = selectElement.value;
+
+        try {
+            const response = await fetch(`/roles/${userId}?newRole=${newRoleValue}`, {
+                method: 'PUT',
+                headers: authHeaders
+            });
+
+            if (response.ok) {
+                showStatus(`Роль для ID ${userId} успешно изменена на ${newRoleValue}`, 'success');
+                fetchUsers(); // Перезагружаем список для обновления данных в таблице
+            } else if (response.status === 403) {
+                showStatus('У вас недостаточно прав для изменения ролей', 'danger');
+            } else {
+                throw new Error('Не удалось обновить роль. Ошибка: ' + response.status);
+            }
+        } catch (error) {
+            showStatus(error.message, 'danger');
+        }
+    }
+
+    // Вспомогательная функция вывода красивых сообщений от Bootstrap
+    function showStatus(message, type) {
+        const statusDiv = document.getElementById('statusMessage');
+        statusDiv.textContent = message;
+        statusDiv.className = `alert alert-${type}`;
+        statusDiv.classList.remove('d-none');
+
+        setTimeout(() => {
+            statusDiv.classList.add('d-none');
+        }, 4000);
+    }
+</script>
+</body>
+</html>
+
+```

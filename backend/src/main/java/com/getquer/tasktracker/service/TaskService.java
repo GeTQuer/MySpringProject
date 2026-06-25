@@ -2,7 +2,7 @@ package com.getquer.tasktracker.service;
 
 import com.getquer.tasktracker.Entities.UserEntity;
 import com.getquer.tasktracker.Repositories.UserRepository;
-import com.getquer.tasktracker.TaskDTO;
+import com.getquer.tasktracker.DTOs.TaskDTO;
 import com.getquer.tasktracker.Entities.TaskEntity;
 import com.getquer.tasktracker.Repositories.TaskRepository;
 import com.getquer.tasktracker.TaskStatus;
@@ -95,6 +95,7 @@ public class TaskService {
                 .orElseThrow(() -> new EntityNotFoundException("Not task with id = " + id));
         return mapToDTO(task);
     }
+
 
     private TaskDTO mapToDTO(TaskEntity taskEntity){
         return new TaskDTO(

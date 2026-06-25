@@ -12,7 +12,7 @@ COPY backend/src ./src
 RUN mvn clean package -DskipTests
 
 # Stage 2: Run the application using Java 25 Runtime
-FROM eclipse-temurin:25-jre.ЕЩ
+FROM eclipse-temurin:25-jre
 WORKDIR /app
 
 COPY --from=builder /app/target/*.jar app.jar

@@ -54,7 +54,7 @@ public class AuthController {
         UserEntity user = new UserEntity();
         user.setUsername(request.username());
         user.setPassword(passwordEncoder.encode(request.password()));
-        user.setRole("Role_USER");
+        user.setRole("ROLE_USER");
         userRepository.save(user);
         return ResponseEntity.ok("Пользователь зарегистрирован!");
     }

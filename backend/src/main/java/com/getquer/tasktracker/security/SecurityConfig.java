@@ -4,6 +4,7 @@
     import com.getquer.tasktracker.Repositories.UserRepository;
     import org.springframework.security.authentication.AuthenticationManager;
     import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
+    import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
     import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
     import org.springframework.context.annotation.Bean;
     import org.springframework.context.annotation.Configuration;
@@ -23,6 +24,7 @@
 
     @Configuration
     @EnableWebSecurity
+    @EnableMethodSecurity
     public class SecurityConfig {
         private final JwtFilter jwtFilter;
         private final UserRepository userRepository;
@@ -39,9 +41,10 @@
                     .authorizeHttpRequests(auth -> auth
                             .requestMatchers(
                                     "/login",
-                                    "/register",
-                                    "/tasks",
                                     "/login.html",
+                                    "/register",
+                                    "/register.html",
+                                    "/tasks",
                                     "/tasks.html",
                                     "/api/auth/**",
                                     "/v3/api-docs",
@@ -49,7 +52,10 @@
                                     "/swagger-ui/**",
                                     "/swagger-ui.html",
                                     "/error",
-                                    "register.html"
+                                    "/admin",
+                                    "/admin-panel.html",
+                                    "/api/tasks/my",
+                                    "/api/tasks/all"
                             ).permitAll()
                             .anyRequest().authenticated()
                     )
@@ -69,15 +75,8 @@
         @Bean
         public UserDetailsService userDetailsService() {
             return username -> {
-                // 1. ПРОВЕРКА НА СУПЕРАДМИНА (из оперативной памяти)
-                if ("admin".equals(username)) {
-                    return org.springframework.security.core.userdetails.User.builder()
-                            .username("admin")
-                            .password(passwordEncoder().encode("1234"))
-                            .roles("ADMIN")
-                            .build();
-                }
-                // 2. ЕСЛИ НЕ АДМИН -> ИДЕМ В БАЗУ ДАННЫХ POSTGRESQL
+                // Проверку на "admin" из оперативки полностью УБРАЛИ.
+                // Теперь сразу идем в PostgreSQL для любого логина:
                 return userRepository.findByUsername(username)
                         .map(user -> new User(
                                 user.getUsername(),
@@ -86,7 +85,6 @@
                                         new SimpleGrantedAuthority(user.getRole())
                                 )
                         ))
-                        // Если и в базе такого нет, тогда окончательно отбиваем запрос
                         .orElseThrow(() -> new UsernameNotFoundException(
                                 "Пользователь " + username + " не найден"
                         ));
