@@ -460,6 +460,12 @@
         }
     }
 
+    // Принудительное открытие модального окна по кнопке (если data-bs-toggle не срабатывает)
+    document.getElementById('addTaskBtn').addEventListener('click', function (e) {
+        e.preventDefault();
+        const modal = new bootstrap.Modal(document.getElementById('addTaskModal'));
+        modal.show();
+    });
 }
 </script>
 </body>
