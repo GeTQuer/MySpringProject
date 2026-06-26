@@ -223,12 +223,14 @@
             headers: { 'Authorization': `Bearer ${token}` }
         });
 
+        console.log('Ответ сервера:', response.status, response.ok);
+
         if (response.ok) {
             const tasks = await response.json();
             const tbody = document.getElementById('tasksBody');
             tbody.innerHTML = '';
             tasks.forEach(task => addRowToTable(task));
-            filterTable(); // применить активные фильтры
+            // Убираем filterTable() – проверяем, что таблица обновляется
         } else {
             logout();
         }
@@ -282,11 +284,13 @@
             body: JSON.stringify(payload)
         });
 
+        console.log('Ответ сервера:', response.status, response.ok);
+
         if (response.ok) {
             bootstrap.Modal.getInstance(document.getElementById('addTaskModal')).hide();
             document.getElementById('createTaskForm').reset();
             document.getElementById('taskAssignee').value = '';
-            await loadTasks(); // обновить весь список
+            window.location.reload(); // Заменяем await loadTasks() на window.location.reload()
         } else {
             alert("Ошибка при сохранении задачи");
         }
@@ -305,8 +309,10 @@
             headers: { 'Authorization': `Bearer ${token}` }
         });
 
+        console.log('Ответ сервера:', response.status, response.ok);
+
         if (response.ok) {
-            await loadTasks(); // обновить весь список
+            window.location.reload(); // Заменяем await loadTasks() на window.location.reload()
         } else {
             alert("Ошибка при удалении задачи");
         }
@@ -349,9 +355,11 @@
             body: JSON.stringify(payload)
         });
 
+        console.log('Ответ сервера:', response.status, response.ok);
+
         if (response.ok) {
             bootstrap.Modal.getInstance(document.getElementById('editTaskModal')).hide();
-            await loadTasks(); // обновить весь список
+            window.location.reload(); // Заменяем await loadTasks() на window.location.reload()
         } else {
             alert("Ошибка при обновлении задачи");
         }
@@ -398,9 +406,11 @@
             headers: { 'Authorization': `Bearer ${token}` }
         });
 
+        console.log('Ответ сервера:', response.status, response.ok);
+
         if (response.ok) {
             idInput.value = '';
-            await loadTasks(); // обновить весь список
+            window.location.reload(); // Заменяем await loadTasks() на window.location.reload()
             alert(`Задача ${taskId} успешно удалена.`);
         } else {
             alert("Ошибка! Возможно, задачи с таким ID не существует.");
