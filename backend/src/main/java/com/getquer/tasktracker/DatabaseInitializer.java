@@ -1,4 +1,4 @@
-package com.getquer.tasktracker.config;
+package com.getquer.tasktracker;
 
 import com.getquer.tasktracker.Entities.UserEntity;
 import com.getquer.tasktracker.Repositories.UserRepository;
