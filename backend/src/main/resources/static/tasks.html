@@ -228,6 +228,7 @@
             const tbody = document.getElementById('tasksBody');
             tbody.innerHTML = '';
             tasks.forEach(task => addRowToTable(task));
+            filterTable(); // применить активные фильтры
         } else {
             logout();
         }
@@ -282,12 +283,10 @@
         });
 
         if (response.ok) {
-            const newTask = await response.json();
-            addRowToTable(newTask);
             bootstrap.Modal.getInstance(document.getElementById('addTaskModal')).hide();
             document.getElementById('createTaskForm').reset();
-            // Сбрасываем селект
             document.getElementById('taskAssignee').value = '';
+            await loadTasks(); // обновить весь список
         } else {
             alert("Ошибка при сохранении задачи");
         }
@@ -307,7 +306,7 @@
         });
 
         if (response.ok) {
-            btnElement.closest('tr').remove();
+            await loadTasks(); // обновить весь список
         } else {
             alert("Ошибка при удалении задачи");
         }
@@ -351,11 +350,8 @@
         });
 
         if (response.ok) {
-            const updatedTask = await response.json();
-            currentRowElement.querySelector('.task-content').textContent = updatedTask.content;
-            currentRowElement.querySelector('.task-employee').textContent = updatedTask.fullNameEmployee;
-            currentRowElement.querySelector('.task-status').innerHTML = `<span class="badge bg-primary">${updatedTask.status}</span>`;
             bootstrap.Modal.getInstance(document.getElementById('editTaskModal')).hide();
+            await loadTasks(); // обновить весь список
         } else {
             alert("Ошибка при обновлении задачи");
         }
@@ -403,11 +399,8 @@
         });
 
         if (response.ok) {
-            const rows = document.querySelectorAll('#tasksBody tr');
-            rows.forEach(row => {
-                if (row.querySelector('.task-id').textContent === taskId) row.remove();
-            });
             idInput.value = '';
+            await loadTasks(); // обновить весь список
             alert(`Задача ${taskId} успешно удалена.`);
         } else {
             alert("Ошибка! Возможно, задачи с таким ID не существует.");
