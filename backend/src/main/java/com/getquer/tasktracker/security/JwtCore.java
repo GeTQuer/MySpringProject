@@ -27,8 +27,15 @@ public class JwtCore {
         UserDetails userDetails = (UserDetails) authentication.getPrincipal();
         SecretKey key = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
 
+        // Получаем первую роль (предполагается одна)
+        String role = userDetails.getAuthorities().stream()
+                .findFirst()
+                .map(grantedAuthority -> grantedAuthority.getAuthority())
+                .orElse("ROLE_USER");
+
         return Jwts.builder()
                 .subject(userDetails.getUsername())
+                .claim("role", role)
                 .issuedAt(new Date())
                 .expiration(new Date(new Date().getTime() + lifetime))
                 .signWith(key)

@@ -55,7 +55,7 @@ public class TaskController {
     }
 
     // 2. Эндпоинт только для админа(видит всё)
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER')")
     @GetMapping("/all")
     public ResponseEntity<List<TaskDTO>> getAllTasksGlobally(
             @RequestParam(value = "status", required = false) TaskStatus status) {
@@ -70,24 +70,35 @@ public class TaskController {
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteById(@PathVariable("id") Long id, Authentication authentication)
     {
+        if (authentication.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_MANAGER") || a.getAuthority().equals("ROLE_ADMIN"))) {
+            return ResponseEntity.status(403).build();
+        }
         String username = authentication.getName();
         taskService.deleteById(id,username);
         return ResponseEntity.ok().build();
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<TaskDTO> getTaskByID(@PathVariable("id") Long id, Authentication authentication){
-        String username = authentication.getName();
-        return ResponseEntity.ok(taskService.getTaskByID(id,username));
+    public ResponseEntity<TaskDTO> getTaskByID(@PathVariable("id") Long id, Authentication authentication) {
+        boolean isManager = authentication.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_MANAGER"));
+        TaskDTO taskDTO = isManager
+                ? taskService.getTaskByIdForManager(id)
+                : taskService.getTaskByID(id, authentication.getName());
+        return ResponseEntity.ok(taskDTO);
     }
 
     @PutMapping("/{id}")
     public ResponseEntity<TaskDTO> updateTask(@PathVariable("id") Long id,
-                                                 @RequestBody TaskDTO updateData,
+                                                 @Valid @RequestBody TaskDTO taskDTO,
                                                  Authentication authentication){
-        String username = authentication.getName();
-        TaskDTO savedTask = taskService.updatedData(id,updateData,username);
-        return ResponseEntity.ok(savedTask);
+        boolean isManager = authentication.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_MANAGER"));
+        TaskDTO updated = isManager
+                ? taskService.updateTaskForManager(id, taskDTO)
+                : taskService.updatedData(id, taskDTO, authentication.getName());
+        return ResponseEntity.ok(updated);
     }
 
 }

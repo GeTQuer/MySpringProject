@@ -177,28 +177,25 @@
     console.log("JWT токен в системе:", decodedToken);
 
     let isAdmin = false;
+    let isManager = false;
     if (decodedToken) {
-        const tokenUsername = decodedToken.sub || decodedToken.username;
-        const tokenString = JSON.stringify(decodedToken);
-
-        // Если в токене имя "admin" или где-то внутри зашито слово "ADMIN"
-        if (tokenUsername === 'admin' || tokenString.includes('ADMIN')) {
-            isAdmin = true;
-        }
+        const role = decodedToken.role;
+        if (role === 'ROLE_ADMIN') isAdmin = true;
+        else if (role === 'ROLE_MANAGER') isManager = true;
     }
+    console.log("isAdmin:", isAdmin, "isManager:", isManager);
 
     // Настройка интерфейса под роль
     document.addEventListener('DOMContentLoaded', () => {
         if (isAdmin) {
-            // Прячем функционал добавления/удаления с гарантией переопределения стилей
-            if (document.getElementById('addTaskBtn')) document.getElementById('addTaskBtn').style.setProperty('display', 'none', 'important');
-            if (document.getElementById('adminDeleteBlock')) document.getElementById('adminDeleteBlock').style.setProperty('display', 'none', 'important');
-
-            // Вставляем красивую кнопку перехода в админку
-            const navLinks = document.getElementById('navLinks');
-            if (navLinks) {
-                navLinks.innerHTML += `<a class="nav-link admin-nav-btn" href="/admin">⚙️ Админ панель</a>`;
-            }
+            document.getElementById('addTaskBtn').style.display = 'none';
+            document.getElementById('adminDeleteBlock').style.display = 'none';
+            document.getElementById('navLinks').innerHTML += `<a class="nav-link admin-nav-btn" href="/admin">⚙️ Админ панель</a>`;
+        } else if (isManager) {
+            // Скрываем блок удаления, но оставляем кнопку добавления (она и так видна)
+            document.getElementById('adminDeleteBlock').style.display = 'none';
+            // По желанию можно добавить кнопку перехода в админку (если у менеджера есть доступ к админ-панели – обычно нет)
+            // Но можно ничего не добавлять
         }
         loadTasks();
     });
@@ -210,8 +207,12 @@
 
     // --- GET: Загрузка задач ---
     async function loadTasks() {
-        const url = isAdmin ? '/api/tasks/all' : '/api/tasks/my';
-
+        let url;
+        if (isAdmin || isManager) {
+            url = '/api/tasks/all';
+        } else {
+            url = '/api/tasks/my';
+        }
         const response = await fetch(url, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -233,7 +234,7 @@
         let actionButtons = `<button class="btn btn-sm btn-primary me-1" onclick="openEditModal(${task.id}, this)">Редактировать</button>`;
 
         // Только обычные юзеры могут удалять строки напрямую
-        if (!isAdmin) {
+        if (!isAdmin && !isManager) {
             actionButtons += `<button class="btn btn-sm btn-danger" onclick="deleteTask(${task.id}, this)">Удалить</button>`;
         }
 
@@ -278,7 +279,10 @@
 
     // --- DELETE: Удаление по кнопке в строке ---
     async function deleteTask(taskId, btnElement) {
-        if (isAdmin) return;
+        if (isAdmin || isManager) {
+            alert("У вас нет прав на удаление задач.");
+            return;
+        }
         if (!confirm("Точно удалить?")) return;
 
         const response = await fetch(`/api/tasks/${taskId}`, {
@@ -363,7 +367,10 @@
 
     // --- УДАЛЕНИЕ ПО ID ИЗ ПОЛЯ ВВОДА ---
     document.getElementById('deleteByIdBtn').addEventListener('click', async () => {
-        if (isAdmin) return;
+        if (isAdmin || isManager) {
+            alert("У вас нет прав на удаление задач.");
+            return;
+        }
         const idInput = document.getElementById('deleteIdInput');
         const taskId = idInput.value.trim();
 

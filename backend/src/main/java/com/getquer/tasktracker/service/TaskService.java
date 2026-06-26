@@ -96,6 +96,23 @@ public class TaskService {
         return mapToDTO(task);
     }
 
+    // Получить задачу по ID без проверки владельца (для MANAGER)
+    public TaskDTO getTaskByIdForManager(Long id) {
+        TaskEntity task = taskRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Not task with id = " + id));
+        return mapToDTO(task);
+    }
+
+    // Обновить задачу без проверки владельца (для MANAGER)
+    public TaskDTO updateTaskForManager(Long id, TaskDTO updateData) {
+        TaskEntity task = taskRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Task not found with id = " + id));
+        task.setContent(updateData.content());
+        task.setStatus(TaskStatus.valueOf(updateData.status()));
+        task.setFullNameEmployee(updateData.fullNameEmployee());
+        taskRepository.save(task);
+        return mapToDTO(task);
+    }
 
     private TaskDTO mapToDTO(TaskEntity taskEntity){
         return new TaskDTO(
