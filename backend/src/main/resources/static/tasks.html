@@ -258,7 +258,7 @@
             status: "OPEN"
         };
 
-        const response = await fetch('/api/tasks/my', {
+        const response = await fetch('/api/tasks', { // Изменено
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
