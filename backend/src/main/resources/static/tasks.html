@@ -103,6 +103,12 @@
                         <label class="form-label">Сотрудник</label>
                         <input type="text" class="form-control" id="taskEmployee" required>
                     </div>
+                    <div class="mb-3" id="assigneeContainer" style="display:none;">
+                        <label class="form-label">Назначить задачу пользователю</label>
+                        <select class="form-select" id="taskAssignee">
+                            <option value="">Себе</option>
+                        </select>
+                    </div>
                 </form>
             </div>
             <div class="modal-footer">
@@ -258,7 +264,15 @@
             status: "OPEN"
         };
 
-        const response = await fetch('/api/tasks', { // Изменено
+        // Если менеджер или админ – добавляем получателя
+        if (isManager || isAdmin) {
+            const assignee = document.getElementById('taskAssignee').value;
+            if (assignee) {
+                payload.assignedUsername = assignee;
+            }
+        }
+
+        const response = await fetch('/api/tasks', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -272,6 +286,8 @@
             addRowToTable(newTask);
             bootstrap.Modal.getInstance(document.getElementById('addTaskModal')).hide();
             document.getElementById('createTaskForm').reset();
+            // Сбрасываем селект
+            document.getElementById('taskAssignee').value = '';
         } else {
             alert("Ошибка при сохранении задачи");
         }
@@ -397,6 +413,54 @@
             alert("Ошибка! Возможно, задачи с таким ID не существует.");
         }
     });
+
+    // Если менеджер или админ – загружаем список пользователей и показываем селект
+    if (isManager || isAdmin) {
+        loadUsers();
+        document.getElementById('assigneeContainer').style.display = 'block';
+    }
+
+    async function loadUsers() {
+        try {
+            const response = await fetch('/api/tasks/users', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (!response.ok) throw new Error('Не удалось загрузить пользователей');
+            const users = await response.json();
+            const select = document.getElementById('taskAssignee');
+            // Удалить опции, кроме первой
+            select.innerHTML = '<option value="">Себе</option>';
+            users.forEach(user => {
+                // Исключаем самого текущего пользователя (его имя в JWT)
+                if (user.username !== decodedToken.sub) {
+                    select.innerHTML += `<option value="${user.username}">${user.username}</option>`;
+                }
+            });
+        } catch (e) {
+            console.error(e);
+        }
+    }
+
+    // Добавляем кнопку "Мои задачи" для менеджера
+    if (isManager) {
+        document.getElementById('navLinks').innerHTML += `<a class="nav-link" href="#" onclick="loadMyTasks()">Мои задачи</a>`;
+    }
+
+    async function loadMyTasks() {
+        const response = await fetch('/api/tasks/my', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (response.ok) {
+            const tasks = await response.json();
+            const tbody = document.getElementById('tasksBody');
+            tbody.innerHTML = '';
+            tasks.forEach(task => addRowToTable(task));
+        } else {
+            alert('Ошибка загрузки ваших задач');
+        }
+    }
+
+}
 </script>
 </body>
 </html>

@@ -1,11 +1,8 @@
 package com.getquer.tasktracker.controllers;
 
 import com.getquer.tasktracker.DTOs.UserDTO;
-import com.getquer.tasktracker.Entities.UserEntity;
 import com.getquer.tasktracker.Repositories.UserRepository;
-import com.getquer.tasktracker.DTOs.TaskDTO;
 import com.getquer.tasktracker.service.TaskService;
-import com.getquer.tasktracker.TaskStatus;
 import com.getquer.tasktracker.service.UserService;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -66,6 +63,13 @@ public class TaskController {
         return ResponseEntity.ok(taskService.getAllTaskGlobally());
     }
 
+    // 3. Эндпоинт для получения списка пользователей
+    @PreAuthorize("hasRole('MANAGER') or hasRole('ADMIN')")
+    @GetMapping("/users")
+    public ResponseEntity<List<UserDTO>> getUsers() {
+        List<UserDTO> users = userService.getAllUsers();
+        return ResponseEntity.ok(users);
+    }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteById(@PathVariable("id") Long id, Authentication authentication)

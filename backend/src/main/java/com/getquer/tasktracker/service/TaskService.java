@@ -19,16 +19,27 @@ public class TaskService {
         this.taskRepository = taskRepository;
         this.userRepository = userRepository;
     }
-    public TaskDTO createTask(TaskDTO taskDTO, String username)
+    public TaskDTO createTask(TaskDTO taskDTO, String creatorUsername)
     {
-        UserEntity user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new RuntimeException("Пользователь не найден"));
-        TaskEntity newTask = new TaskEntity();
-        newTask.setContent(taskDTO.content());
-        newTask.setFullNameEmployee(taskDTO.fullNameEmployee());
-        newTask.setStatus(TaskStatus.valueOf(taskDTO.status()));
-        newTask.setUser(user);
-        TaskEntity savedTask = taskRepository.save(newTask);
+        UserEntity creator = userRepository.findByUsername(creatorUsername)
+                .orElseThrow(() -> new RuntimeException("Создатель не найден: " + creatorUsername));
+
+        // Определяем, кому назначаем задачу
+        String assignedUsername = taskDTO.assignedUsername();
+        UserEntity targetUser = creator; // по умолчанию самому себе
+
+        if (assignedUsername != null && !assignedUsername.isEmpty()
+                && (creator.getRole().equals("MANAGER") || creator.getRole().equals("ADMIN"))) {
+            targetUser = userRepository.findByUsername(assignedUsername)
+                    .orElseThrow(() -> new RuntimeException("Целевой пользователь не найден: " + assignedUsername));
+        }
+
+        TaskEntity task = new TaskEntity();
+        task.setContent(taskDTO.content());
+        task.setFullNameEmployee(taskDTO.fullNameEmployee());
+        task.setStatus(TaskStatus.valueOf(taskDTO.status()));
+        task.setUser(targetUser);
+        TaskEntity savedTask = taskRepository.save(task);
         return mapToDTO(savedTask);
     }
 
@@ -119,7 +130,8 @@ public class TaskService {
                 taskEntity.getId(),
                 taskEntity.getContent(),
                 taskEntity.getFullNameEmployee(),
-                taskEntity.getStatus().name()
+                taskEntity.getStatus().name(),
+                taskEntity.getUser().getUsername()
         );
     }
 

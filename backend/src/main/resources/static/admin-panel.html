@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -143,8 +142,8 @@
             });
 
             if (response.ok) {
-                showStatus(`Роль для ID ${userId} успешно изменена на ${newRoleValue}`, 'success');
-                fetchUsers(); // Перезагружаем список для обновления данных в таблице
+                showStatus(`Роль для ID ${userId} успешно изменена на ${newRoleValue}. Пользователю нужно перезайти в систему.`, 'success');
+                fetchUsers();
             } else if (response.status === 403) {
                 showStatus('У вас недостаточно прав для изменения ролей', 'danger');
             } else {
@@ -170,4 +169,3 @@
 </body>
 </html>
 
-```
