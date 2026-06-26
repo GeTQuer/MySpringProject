@@ -118,9 +118,9 @@
                 <td>
                     <div class="input-group input-group-sm">
                         <select class="form-select" id="role-select-${user.id}">
-                            <option value="ROLE_USER" ${user.role === 'ROLE_USER' || user.role === 'USER' ? 'selected' : ''}>Пользователь</option>
-                            <option value="ROLE_MANAGER" ${user.role === 'ROLE_MANAGER' || user.role === 'MANAGER' ? 'selected' : ''}>Руководитель</option>
-                            <option value="ROLE_ADMIN" ${user.role === 'ROLE_ADMIN' || user.role === 'ADMIN' ? 'selected' : ''}>Администратор</option>
+                            <option value="USER" ${user.role === 'USER' ? 'selected' : ''}>Пользователь</option>
+                            <option value="MANAGER" ${user.role === 'MANAGER' ? 'selected' : ''}>Руководитель</option>
+                            <option value="ADMIN" ${user.role === 'ADMIN' ? 'selected' : ''}>Администратор</option>
                         </select>
                         <button class="btn btn-primary" onclick="upgradeRole(${user.id})">Сохранить</button>
                     </div>

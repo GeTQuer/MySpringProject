@@ -28,7 +28,7 @@ public class DatabaseInitializer implements CommandLineRunner {
 
             // Хэшируем твой новый пароль "12345" прямо в коде перед отправкой в БД
             admin.setPassword(passwordEncoder.encode("12345"));
-            admin.setRole("ROLE_ADMIN");
+            admin.setRole("ADMIN");
 
             userRepository.save(admin);
 
