@@ -1,13 +1,16 @@
 package com.getquer.tasktracker.controllers;
 
+import com.getquer.tasktracker.DTOs.TaskDTO;
 import com.getquer.tasktracker.DTOs.UserDTO;
 import com.getquer.tasktracker.Repositories.UserRepository;
+import com.getquer.tasktracker.TaskStatus;
 import com.getquer.tasktracker.service.TaskService;
 import com.getquer.tasktracker.service.UserService;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
 import jakarta.validation.Valid;
 
 import java.security.Principal;
@@ -19,6 +22,7 @@ public class TaskController {
     private final TaskService taskService;
     private final UserRepository userRepository;
     private final UserService userService;
+
 
     public TaskController(TaskService taskService, UserRepository userRepository, UserService userService) {
         this.taskService = taskService;
