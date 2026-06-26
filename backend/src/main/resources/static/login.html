@@ -119,7 +119,7 @@
                 }
 
                 // Сохраняем токен в память браузера
-                localStorage.setItem('jwt_token', finalToken);
+                sessionStorage.setItem('jwt_token', finalToken);
                 // Перенаправляем на страницу задач
                 window.location.href = '/tasks.html';
             } else {

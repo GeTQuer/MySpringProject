@@ -55,7 +55,7 @@
 
 <script>
     // 1. Изменили ключ на 'jwt_token', чтобы он совпадал с логикой остальных страниц
-    const token = localStorage.getItem('jwt_token');
+    const token = sessionStorage.getItem('jwt_token');
 
     if (!token) {
         window.location.href = '/login';
@@ -72,7 +72,7 @@
 
     // Функция выхода из аккаунта
     function logout() {
-        localStorage.removeItem('jwt_token');
+        sessionStorage.removeItem('jwt_token');
         window.location.href = '/login';
     }
 
