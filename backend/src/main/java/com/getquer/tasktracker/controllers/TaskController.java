@@ -2,10 +2,13 @@ package com.getquer.tasktracker.controllers;
 
 import com.getquer.tasktracker.DTOs.TaskDTO;
 import com.getquer.tasktracker.DTOs.UserDTO;
+import com.getquer.tasktracker.Entities.TaskEntity;
 import com.getquer.tasktracker.Repositories.UserRepository;
 import com.getquer.tasktracker.TaskStatus;
 import com.getquer.tasktracker.service.TaskService;
 import com.getquer.tasktracker.service.UserService;
+import org.springframework.data.domain.Page;
+import org.springframework.scheduling.config.Task;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.http.ResponseEntity;
@@ -44,27 +47,33 @@ public class TaskController {
 
     // 1. Эндпоинт только для сотрудников (видят только свои задачи)
     @GetMapping("/my")
-    public ResponseEntity<List<TaskDTO>> getMyTasks(
+    public ResponseEntity<Page<TaskDTO>> getMyTasks(
             @RequestParam(value = "status", required = false) TaskStatus status,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
             Authentication authentication) {
 
         String username = authentication.getName();
         if (status != null) {
-            return ResponseEntity.ok(taskService.getAllTasksByStatus(username, status));
+            return ResponseEntity.ok(taskService.getAllTasksByStatus(username, status,page,size));
         }
-        return ResponseEntity.ok(taskService.getAllTasks(username));
+        return ResponseEntity.ok(taskService.getAllTasks(username,page,size));
     }
 
     // 2. Эндпоинт только для админа(видит всё)
     @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER')")
     @GetMapping("/all")
-    public ResponseEntity<List<TaskDTO>> getAllTasksGlobally(
-            @RequestParam(value = "status", required = false) TaskStatus status) {
+    public ResponseEntity<Page<TaskDTO>> getAllTasksGlobally(
+            @RequestParam(value = "status", required = false) TaskStatus status,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
 
         if (status != null) {
-            return ResponseEntity.ok(taskService.getAllTaskGloballyByStatus(status));
+            Page<TaskDTO> taskPage = taskService.getAllTaskGloballyByStatus(status,page,size);
+            return ResponseEntity.ok(taskPage);
         }
-        return ResponseEntity.ok(taskService.getAllTaskGlobally());
+        Page<TaskDTO> taskPage = taskService.getAllTaskGlobally(page,size);
+        return ResponseEntity.ok(taskPage);
     }
 
     // 3. Эндпоинт для получения списка пользователей
@@ -83,7 +92,7 @@ public class TaskController {
             return ResponseEntity.status(403).build();
         }
         String username = authentication.getName();
-        taskService.deleteById(id,username);
+        taskService.deleteByIdAndUsername(id,username);
         return ResponseEntity.ok().build();
     }
 

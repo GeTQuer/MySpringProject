@@ -1,5 +1,8 @@
 package com.getquer.tasktracker.Entities;
 import jakarta.persistence.*;
+import org.hibernate.annotations.BatchSize;
+
+import java.util.List;
 
 @Entity
 @Table(name = "users")
@@ -16,6 +19,7 @@ public class UserEntity {
 
     @Column(nullable = false)
     private String role;
+    
     public UserEntity(){}
 
     public Long getId() {

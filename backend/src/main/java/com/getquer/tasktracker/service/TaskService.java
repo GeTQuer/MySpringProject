@@ -8,8 +8,13 @@ import com.getquer.tasktracker.Repositories.TaskRepository;
 import com.getquer.tasktracker.TaskStatus;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.stereotype.Service;
+
 import java.util.ArrayList;
 import java.util.List;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 
 @Service
 public class TaskService {
@@ -35,6 +40,7 @@ public class TaskService {
         }
 
         TaskEntity task = new TaskEntity();
+
         task.setContent(taskDTO.content());
         task.setFullNameEmployee(taskDTO.fullNameEmployee());
         task.setStatus(TaskStatus.valueOf(taskDTO.status()));
@@ -43,50 +49,36 @@ public class TaskService {
         return mapToDTO(savedTask);
     }
 
-    public List<TaskDTO> getAllTaskGlobally(){
-        List<TaskEntity> tasks = taskRepository.findAll();
-        List<TaskDTO> dtos = new ArrayList<>();
-        for (TaskEntity task : tasks) {
-            dtos.add(mapToDTO(task));
-        }
-        return dtos;
+    public Page<TaskDTO> getAllTaskGlobally(int page,int size){
+        Pageable pageable = PageRequest.of(page,size,Sort.by("id").descending());
+        Page<TaskEntity> taskPage = taskRepository.findAll(pageable);
+        return taskPage.map(task->mapToDTO(task));
     }
-    public List<TaskDTO> getAllTaskGloballyByStatus(TaskStatus status){
-        List<TaskEntity> tasks = taskRepository.findAllByStatus(status);
-        List<TaskDTO> dtos = new ArrayList<>();
-        for (TaskEntity task : tasks) {
-            dtos.add(mapToDTO(task));
-        }
-        return dtos;
+    public Page<TaskDTO> getAllTaskGloballyByStatus(TaskStatus status,int page,int size){
+        Pageable pageable = PageRequest.of(page, size, Sort.by("id").descending());
+        Page<TaskEntity> taskPage = taskRepository.findAllByStatus(status,pageable);
+        return taskPage.map(task-> mapToDTO(task));
     }
-    public List<TaskDTO> getAllTasks(String username) {
-        List<TaskEntity> tasks = taskRepository.findAllByUserUsername(username);
-        List<TaskDTO> dtos = new ArrayList<>();
-        for (TaskEntity task : tasks) {
-            dtos.add(mapToDTO(task));
-        }
-        return dtos;
+    public Page<TaskDTO> getAllTasks(String username,int page,int size) {
+        Pageable pageable = PageRequest.of(page,size,Sort.by("id").descending());
+        Page<TaskEntity> taskPage = taskRepository.findAllByUserUsername(username,pageable);
+        return taskPage.map(task->mapToDTO(task));
     }
 
-    public List<TaskDTO> getAllTasksByStatus(String username, TaskStatus status) {
-        List<TaskEntity> tasks = taskRepository.findAllByUserUsernameAndStatus(
-                username,status
-        );
-        List<TaskDTO> dtos = new ArrayList<>();
-        for (TaskEntity task : tasks) {
-            dtos.add(mapToDTO(task));
-        }
-        return dtos;
+    public Page<TaskDTO> getAllTasksByStatus(String username, TaskStatus status,int page,int size) {
+        Pageable pageable = PageRequest.of(page,size,Sort.by("id").descending());
+        Page<TaskEntity> taskPage = taskRepository.findAllByUserUsernameAndStatus(username,status,pageable);
+        return taskPage.map(task->mapToDTO(task));
 //        return taskRepository.findAllByUserUsernameAndStatus(username, status)
 //                .stream()
 //                .map(this::mapToDTO)
 //                .toList(); // Для Java 16+
     }
 
-    public void deleteById(Long id,String username)
+    public void deleteByIdAndUsername(Long id,String username)
     {
         TaskEntity task = taskRepository.findByIdAndUserUsername(id,username).orElseThrow(
-                ()-> new EntityNotFoundException("Not task with id = " + id)
+                ()-> new EntityNotFoundException("Task with id = "+ id + " not found or you don't have permission to modify if")
         );
         taskRepository.delete(task);
     }
@@ -94,7 +86,7 @@ public class TaskService {
 
     public TaskDTO updatedData(Long id,TaskDTO updateData, String username){
         TaskEntity task = taskRepository.findByIdAndUserUsername(id,username)
-                .orElseThrow(()-> new EntityNotFoundException("Task not foud with id = " + id));
+                .orElseThrow(()-> new EntityNotFoundException("Task with id = "+ id + " not found or you don't have permission to modify if"));
         task.setContent(updateData.content());
         task.setStatus(TaskStatus.valueOf(updateData.status()));
         task.setFullNameEmployee(updateData.fullNameEmployee());
@@ -103,7 +95,7 @@ public class TaskService {
     }
     public TaskDTO getTaskByID(Long id,String username){
         TaskEntity task = taskRepository.findByIdAndUserUsername(id,username)
-                .orElseThrow(() -> new EntityNotFoundException("Not task with id = " + id));
+                .orElseThrow(() -> new EntityNotFoundException("Task with id = "+ id + " not found or you don't have permission to modify if"));
         return mapToDTO(task);
     }
 
