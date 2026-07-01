@@ -47,6 +47,7 @@
                 <tbody id="usersTableBody">
                 </tbody>
             </table>
+            <div id="pagination-controls" class="d-flex justify-content-center m-3 gap-2"></div>
         </div>
     </div>
 </div>
@@ -54,37 +55,68 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 
 <script>
-    // 1. Изменили ключ на 'jwt_token', чтобы он совпадал с логикой остальных страниц
     const token = sessionStorage.getItem('jwt_token');
 
     if (!token) {
         window.location.href = '/login';
     }
 
-    // Базовые заголовки для авторизованных запросов к REST API
     const authHeaders = {
         'Authorization': 'Bearer ' + token,
         'Content-Type': 'application/json'
     };
 
-    // Загружаем список при старте страницы
-    document.addEventListener('DOMContentLoaded', fetchUsers);
+    // Переменные пагинации
+    let currentPage = 0;
+    const pageSize = 15;
 
-    // Функция выхода из аккаунта
+    document.addEventListener('DOMContentLoaded', () => fetchUsers(0));
+
     function logout() {
         sessionStorage.removeItem('jwt_token');
         window.location.href = '/login';
     }
 
-    // --- GET: Получение всех пользователей ---
-    async function fetchUsers() {
+    // --- Универсальная функция отрисовки кнопок страниц ---
+    function renderPagination(totalPages, currentPageNumber, containerId, fetchFunction) {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+        container.innerHTML = '';
+
+        if (totalPages <= 1) return;
+
+        const prevBtn = document.createElement('button');
+        prevBtn.className = 'btn btn-outline-secondary btn-sm';
+        prevBtn.innerText = '← Назад';
+        prevBtn.disabled = (currentPageNumber === 0);
+        prevBtn.onclick = () => fetchFunction(currentPageNumber - 1);
+        container.appendChild(prevBtn);
+
+        for (let i = 0; i < totalPages; i++) {
+            const pageBtn = document.createElement('button');
+            pageBtn.className = `btn btn-sm ${i === currentPageNumber ? 'btn-primary' : 'btn-outline-primary'}`;
+            pageBtn.innerText = i + 1;
+            pageBtn.onclick = () => fetchFunction(i);
+            container.appendChild(pageBtn);
+        }
+
+        const nextBtn = document.createElement('button');
+        nextBtn.className = 'btn btn-outline-secondary btn-sm';
+        nextBtn.innerText = 'Вперед →';
+        nextBtn.disabled = (currentPageNumber === totalPages - 1);
+        nextBtn.onclick = () => fetchFunction(currentPageNumber + 1);
+        container.appendChild(nextBtn);
+    }
+
+    // --- GET: Получение всех пользователей с пагинацией ---
+    async function fetchUsers(page = 0) {
+        currentPage = page;
         try {
-            const response = await fetch('/roles', {
+            const response = await fetch(`/roles?page=${page}&size=${pageSize}`, {
                 method: 'GET',
                 headers: authHeaders
             });
 
-            // Если токен протух или у пользователя нет роли ADMIN — выбрасываем на логин
             if (response.status === 401 || response.status === 403) {
                 logout();
                 return;
@@ -94,23 +126,28 @@
                 throw new Error('Не удалось загрузить пользователей. Ошибка сервера.');
             }
 
-            const users = await response.json();
+            const data = await response.json();
+            // Поддержка и Page<T> и List<T>
+            const users = data.content !== undefined ? data.content : data;
+
             renderTable(users);
+
+            if (data.totalPages !== undefined) {
+                renderPagination(data.totalPages, data.number, 'pagination-controls', fetchUsers);
+            } else {
+                document.getElementById('pagination-controls').innerHTML = '';
+            }
         } catch (error) {
             showStatus(error.message, 'danger');
         }
     }
 
-    // --- Отрисовка таблицы ---
     function renderTable(users) {
         const tbody = document.getElementById('usersTableBody');
         tbody.innerHTML = '';
 
         users.forEach(user => {
             const tr = document.createElement('tr');
-
-            // Тернарные проверки внутри select корректно подсветят текущую роль, 
-            // даже если в DTO она записана без префикса (например, просто "USER")
             tr.innerHTML = `
                 <td><strong class="text-muted">${user.id}</strong></td>
                 <td><strong>${user.username}</strong></td>
@@ -130,7 +167,6 @@
         });
     }
 
-    // --- PUT: Обновление роли пользователя ---
     async function upgradeRole(userId) {
         const selectElement = document.getElementById(`role-select-${userId}`);
         const newRoleValue = selectElement.value;
@@ -143,7 +179,7 @@
 
             if (response.ok) {
                 showStatus(`Роль для ID ${userId} успешно изменена на ${newRoleValue}. Пользователю нужно перезайти в систему.`, 'success');
-                fetchUsers();
+                fetchUsers(currentPage); // Обновляем текущую страницу после изменения
             } else if (response.status === 403) {
                 showStatus('У вас недостаточно прав для изменения ролей', 'danger');
             } else {
@@ -154,7 +190,6 @@
         }
     }
 
-    // Вспомогательная функция вывода красивых сообщений от Bootstrap
     function showStatus(message, type) {
         const statusDiv = document.getElementById('statusMessage');
         statusDiv.textContent = message;
@@ -168,4 +203,3 @@
 </script>
 </body>
 </html>
-

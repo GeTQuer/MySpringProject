@@ -7,14 +7,11 @@ import com.getquer.tasktracker.Entities.TaskEntity;
 import com.getquer.tasktracker.Repositories.TaskRepository;
 import com.getquer.tasktracker.TaskStatus;
 import jakarta.persistence.EntityNotFoundException;
+import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 
 @Service
 public class TaskService {
@@ -24,14 +21,32 @@ public class TaskService {
         this.taskRepository = taskRepository;
         this.userRepository = userRepository;
     }
-    public TaskDTO createTask(TaskDTO taskDTO, String creatorUsername)
-    {
-        UserEntity creator = userRepository.findByUsername(creatorUsername)
-                .orElseThrow(() -> new RuntimeException("Создатель не найден: " + creatorUsername));
 
-        // Определяем, кому назначаем задачу
+    private Page<TaskDTO> convertToTaskPage(Page<Long> idPage, Pageable pageable) {
+        // Если база ничего не нашла по фильтрам, сразу отдаем пустую страницу
+        if (idPage.isEmpty()) {
+            return Page.empty(pageable);
+        }
+
+        List<Long> ids = idPage.getContent();
+
+        List<TaskEntity> tasks = taskRepository.findAllByIdsWithUser(ids);
+
+        List<TaskDTO> dtos = tasks.stream()
+                .sorted((t1, t2) -> t2.getId().compareTo(t1.getId()))
+                .map(this::mapToDTO)
+                .toList();
+        return new PageImpl<>(dtos, pageable, idPage.getTotalElements());
+    }
+
+
+    public TaskDTO createTask(TaskDTO taskDTO,String currentUsername)
+    {
+        UserEntity creator = userRepository.findByUsername(currentUsername)
+                .orElseThrow(() -> new RuntimeException("Создатель не найден: " + currentUsername));
+
         String assignedUsername = taskDTO.assignedUsername();
-        UserEntity targetUser = creator; // по умолчанию самому себе
+        UserEntity targetUser = creator;
 
         if (assignedUsername != null && !assignedUsername.isEmpty()
                 && (creator.getRole().equals("MANAGER") || creator.getRole().equals("ADMIN"))) {
@@ -40,35 +55,39 @@ public class TaskService {
         }
 
         TaskEntity task = new TaskEntity();
-
         task.setContent(taskDTO.content());
         task.setFullNameEmployee(taskDTO.fullNameEmployee());
         task.setStatus(TaskStatus.valueOf(taskDTO.status()));
+
+        // Теперь targetUser — это 100% объект из базы, Hibernate без проблем возьмет его ID
         task.setUser(targetUser);
+
         TaskEntity savedTask = taskRepository.save(task);
         return mapToDTO(savedTask);
     }
 
     public Page<TaskDTO> getAllTaskGlobally(int page,int size){
         Pageable pageable = PageRequest.of(page,size,Sort.by("id").descending());
-        Page<TaskEntity> taskPage = taskRepository.findAll(pageable);
-        return taskPage.map(task->mapToDTO(task));
+        Page<Long> idPages = taskRepository.findAllIds(pageable);
+        return convertToTaskPage(idPages,pageable);
     }
     public Page<TaskDTO> getAllTaskGloballyByStatus(TaskStatus status,int page,int size){
         Pageable pageable = PageRequest.of(page, size, Sort.by("id").descending());
-        Page<TaskEntity> taskPage = taskRepository.findAllByStatus(status,pageable);
-        return taskPage.map(task-> mapToDTO(task));
+        Page<Long> idPages =taskRepository.findAllByStatus(status,pageable);
+
+        return convertToTaskPage(idPages,pageable);
     }
     public Page<TaskDTO> getAllTasks(String username,int page,int size) {
         Pageable pageable = PageRequest.of(page,size,Sort.by("id").descending());
-        Page<TaskEntity> taskPage = taskRepository.findAllByUserUsername(username,pageable);
-        return taskPage.map(task->mapToDTO(task));
+
+        Page<Long> idPages = taskRepository.findAllByUserUsername(username,pageable);
+        return convertToTaskPage(idPages,pageable);
     }
 
     public Page<TaskDTO> getAllTasksByStatus(String username, TaskStatus status,int page,int size) {
         Pageable pageable = PageRequest.of(page,size,Sort.by("id").descending());
-        Page<TaskEntity> taskPage = taskRepository.findAllByUserUsernameAndStatus(username,status,pageable);
-        return taskPage.map(task->mapToDTO(task));
+        Page<Long> idPages = taskRepository.findAllByUserUsernameAndStatus(username,status,pageable);
+        return convertToTaskPage(idPages,pageable);
 //        return taskRepository.findAllByUserUsernameAndStatus(username, status)
 //                .stream()
 //                .map(this::mapToDTO)

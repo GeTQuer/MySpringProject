@@ -4,6 +4,7 @@ import com.getquer.tasktracker.Entities.UserEntity;
 import com.getquer.tasktracker.Repositories.UserRepository;
 import com.getquer.tasktracker.security.JwtCore;
 import com.getquer.tasktracker.request.SigninRequest;
+import com.getquer.tasktracker.service.UserService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -20,14 +21,12 @@ import org.springframework.web.bind.annotation.RestController;
 public class AuthController {
     private final AuthenticationManager authenticationManager;
     private final JwtCore jwtCore;
-    private final UserRepository userRepository;
-    private final PasswordEncoder passwordEncoder;
+    private final UserService userService;
 
-    public AuthController(AuthenticationManager authenticationManager, JwtCore jwtCore, UserRepository userRepository, PasswordEncoder passwordEncoder) {
+    public AuthController(AuthenticationManager authenticationManager, JwtCore jwtCore, UserRepository userRepository, PasswordEncoder passwordEncoder, UserService userService) {
         this.authenticationManager = authenticationManager;
         this.jwtCore = jwtCore;
-        this.userRepository = userRepository;
-        this.passwordEncoder = passwordEncoder;
+        this.userService = userService;
     }
 
     // Принимает логин и пароль в  json формате
@@ -46,16 +45,11 @@ public class AuthController {
 
     @PostMapping("/register")
     public ResponseEntity<String> register(@RequestBody SigninRequest request){
-        if (userRepository.findByUsername(request.username()).isPresent()){
-            return ResponseEntity.badRequest().body(
-                    "Пользователь с таким username существует"
-            );
+        try {
+            userService.registerUser(request);
+            return ResponseEntity.ok("Пользователь зарегистрирован!");
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
         }
-        UserEntity user = new UserEntity();
-        user.setUsername(request.username());
-        user.setPassword(passwordEncoder.encode(request.password()));
-        user.setRole("USER");
-        userRepository.save(user);
-        return ResponseEntity.ok("Пользователь зарегистрирован!");
     }
 }

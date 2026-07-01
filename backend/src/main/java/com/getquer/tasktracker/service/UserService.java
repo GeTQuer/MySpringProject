@@ -3,18 +3,25 @@ package com.getquer.tasktracker.service;
 import com.getquer.tasktracker.DTOs.UserDTO;
 import com.getquer.tasktracker.Entities.UserEntity;
 import com.getquer.tasktracker.Repositories.UserRepository;
+import com.getquer.tasktracker.request.SigninRequest;
 import jakarta.persistence.EntityNotFoundException;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
 
 @Service
-public class UserService {
+public class UserService implements UserDetailsService {
     private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
 
-    public UserService(UserRepository userRepository) {
+    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
     }
 
     public UserDTO upgradeRoleUser(Long id,String newRole){
@@ -41,6 +48,21 @@ public class UserService {
         );
     }
 
+    public void registerUser(SigninRequest request) {
+        if (userRepository.findByUsername(request.username()).isPresent()){
+            throw new IllegalArgumentException("Пользователь с таким username существует");
+        }
 
+        UserEntity user = new UserEntity();
+        user.setUsername(request.username());
+        user.setPassword(passwordEncoder.encode(request.password()));
+        user.setRole("USER"); // Бизнес-правило: новые юзеры всегда USER
 
+        userRepository.save(user);
+    }
+    @Override
+    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
+        return userRepository.findByUsername(username)
+                .orElseThrow(() -> new UsernameNotFoundException("Пользователь не найден: " + username));
+    }
 }

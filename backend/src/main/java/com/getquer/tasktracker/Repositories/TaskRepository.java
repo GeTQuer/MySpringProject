@@ -20,33 +20,36 @@ import java.util.Optional;
 @Repository
 public interface TaskRepository extends JpaRepository<TaskEntity, Long>
 {
-    @Query(
-            value = "SELECT t FROM TaskEntity t JOIN FETCH t.user u WHERE t.status = :status",
-            countQuery = "SELECT COUNT(t) FROM TaskEntity t WHERE t.status = :status and t.username = :username"
-    )
-    Page<TaskEntity> findAllByUserUsernameAndStatus(@Param("username") String username,
-                                                    @Param("status") TaskStatus status,
-                                                    Pageable pageable);
 
     @Query(
-            value = "SELECT t FROM TaskEntity t JOIN FETCH t.user u WHERE u.username = :username",
+            value = "SELECT t.id FROM TaskEntity t JOIN t.user u WHERE t.status = :status AND u.username = :username",
+            countQuery = "SELECT COUNT(t) FROM TaskEntity t JOIN t.user u WHERE t.status = :status AND u.username = :username"
+    )
+    Page<Long> findAllByUserUsernameAndStatus(@Param("username") String username,
+                                              @Param("status") TaskStatus status,
+                                              Pageable pageable);
+
+    @Query(
+            value = "SELECT t.id FROM TaskEntity t JOIN t.user u WHERE u.username = :username",
             countQuery = "SELECT COUNT(t) FROM TaskEntity t WHERE t.user.username = :username"
     )
-    Page<TaskEntity> findAllByUserUsername(@Param("username") String username, Pageable pageable);
+    Page<Long> findAllByUserUsername(@Param("username") String username, Pageable pageable);
 
     @Query(
-            value = "SELECT t FROM TaskEntity t JOIN FETCH t.user u WHERE t.status = :status",
+            value = "SELECT t.id FROM TaskEntity t WHERE t.status = :status",
             countQuery = "SELECT COUNT(t) FROM TaskEntity t WHERE t.status = :status"
     )
-    Page<TaskEntity> findAllByStatus(@Param("status") TaskStatus status, Pageable pageable);
+    Page<Long> findAllByStatus(@Param("status") TaskStatus status, Pageable pageable);
 
     @Query(
-            value = "SELECT t FROM TaskEntity t JOIN FETCH t.user",
+            value = "SELECT t.id FROM TaskEntity t",
             countQuery = "SELECT COUNT(t) FROM TaskEntity t"
     )
-    Page<TaskEntity> findAll(Pageable pageable);
+    Page<Long> findAllIds(Pageable pageable);
 
-    Optional<TaskEntity> findById(@Param("id") Long id);
+    @Query("SELECT t FROM TaskEntity t JOIN FETCH t.user WHERE t.id IN :ids")
+    List<TaskEntity> findAllByIdsWithUser(@Param("ids") List<Long> ids);
+
 
     Optional<TaskEntity> findByIdAndUserUsername(Long id, String username);
 

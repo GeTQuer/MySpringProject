@@ -3,6 +3,7 @@ package com.getquer.tasktracker.controllers;
 import com.getquer.tasktracker.DTOs.TaskDTO;
 import com.getquer.tasktracker.DTOs.UserDTO;
 import com.getquer.tasktracker.Entities.TaskEntity;
+import com.getquer.tasktracker.Entities.UserEntity;
 import com.getquer.tasktracker.Repositories.UserRepository;
 import com.getquer.tasktracker.TaskStatus;
 import com.getquer.tasktracker.service.TaskService;
@@ -12,6 +13,7 @@ import org.springframework.scheduling.config.Task;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
@@ -34,12 +36,10 @@ public class TaskController {
     }
 
     @PostMapping
-    public ResponseEntity<TaskDTO> createTask(@Valid @RequestBody TaskDTO taskDTO, Principal principal) {
-        // Достаем логин из токена
-        String username = principal.getName();
-
-        // Передаем логин в сервис вместе с данными задачи
-        TaskDTO createdTask = taskService.createTask(taskDTO, username);
+    public ResponseEntity<TaskDTO> createTask(@Valid @RequestBody TaskDTO taskDTO,
+                                              Principal principal) {
+        String currentUsername = principal.getName();
+        TaskDTO createdTask = taskService.createTask(taskDTO, currentUsername);
 
         return ResponseEntity.ok(createdTask);
     }

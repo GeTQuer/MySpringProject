@@ -5,7 +5,6 @@
     <title>Список задач</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        /* Стили, чтобы админская кнопка не сливалась с остальными */
         .admin-nav-btn {
             color: #ffc107 !important;
             font-weight: bold;
@@ -45,11 +44,11 @@
 
     <div class="row mb-4 bg-white p-3 rounded shadow-sm border mx-0">
         <div class="col-md-4">
-            <label class="form-label small text-muted">Поиск по описанию</label>
+            <label class="form-label small text-muted">Поиск по описанию (текущая страница)</label>
             <input type="text" id="searchInput" class="form-control" placeholder="Введите текст...">
         </div>
         <div class="col-md-3">
-            <label class="form-label small text-muted">Фильтр по статусу</label>
+            <label class="form-label small text-muted">Фильтр по статусу (текущая страница)</label>
             <select id="statusFilter" class="form-select">
                 <option value="ALL">Все статусы</option>
                 <option value="OPEN">OPEN</option>
@@ -82,6 +81,7 @@
                 <tbody id="tasksBody">
                 </tbody>
             </table>
+            <div id="pagination-controls" class="d-flex justify-content-center mt-3 gap-2"></div>
         </div>
     </div>
 </div>
@@ -164,7 +164,11 @@
 
     let currentRowElement = null;
 
-    // Парсинг JWT
+    // Переменные пагинации
+    let currentPage = 0;
+    const pageSize = 15;
+    let currentFetchMode = 'ALL';
+
     function parseJwt(token) {
         try {
             const base64Url = token.split('.')[1];
@@ -178,32 +182,32 @@
         }
     }
 
-    // Железобетонное определение роли
     const decodedToken = parseJwt(token);
-    console.log("JWT токен в системе:", decodedToken);
-
     let isAdmin = false;
     let isManager = false;
+
     if (decodedToken) {
         const role = decodedToken.role;
         if (role === 'ROLE_ADMIN') isAdmin = true;
         else if (role === 'ROLE_MANAGER') isManager = true;
     }
-    console.log("isAdmin:", isAdmin, "isManager:", isManager);
 
-    // Настройка интерфейса под роль
     document.addEventListener('DOMContentLoaded', () => {
         if (isAdmin) {
             document.getElementById('addTaskBtn').style.display = 'none';
             document.getElementById('adminDeleteBlock').style.display = 'none';
             document.getElementById('navLinks').innerHTML += `<a class="nav-link admin-nav-btn" href="/admin">⚙️ Админ панель</a>`;
         } else if (isManager) {
-            // Скрываем блок удаления, но оставляем кнопку добавления (она и так видна)
             document.getElementById('adminDeleteBlock').style.display = 'none';
-            // По желанию можно добавить кнопку перехода в админку (если у менеджера есть доступ к админ-панели – обычно нет)
-            // Но можно ничего не добавлять
+            document.getElementById('navLinks').innerHTML += `<a class="nav-link" href="#" onclick="loadMyTasks(0)">Мои задачи</a>`;
         }
-        loadTasks();
+
+        if (isManager || isAdmin) {
+            loadUsers();
+            document.getElementById('assigneeContainer').style.display = 'block';
+        }
+
+        loadTasks(0);
     });
 
     function logout() {
@@ -211,28 +215,98 @@
         window.location.href = '/login';
     }
 
-    // --- GET: Загрузка задач ---
-    async function loadTasks() {
-        let url;
-        if (isAdmin || isManager) {
-            url = '/api/tasks/all';
-        } else {
-            url = '/api/tasks/my';
+    function refreshCurrentView() {
+        if (currentFetchMode === 'ALL') loadTasks(currentPage);
+        else loadMyTasks(currentPage);
+    }
+
+    // --- Универсальная функция отрисовки кнопок страниц ---
+    function renderPagination(totalPages, currentPageNumber, containerId, fetchFunction) {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+        container.innerHTML = '';
+
+        if (totalPages <= 1) return;
+
+        const prevBtn = document.createElement('button');
+        prevBtn.className = 'btn btn-outline-secondary btn-sm';
+        prevBtn.innerText = '← Назад';
+        prevBtn.disabled = (currentPageNumber === 0);
+        prevBtn.onclick = () => fetchFunction(currentPageNumber - 1);
+        container.appendChild(prevBtn);
+
+        for (let i = 0; i < totalPages; i++) {
+            const pageBtn = document.createElement('button');
+            pageBtn.className = `btn btn-sm ${i === currentPageNumber ? 'btn-primary' : 'btn-outline-primary'}`;
+            pageBtn.innerText = i + 1;
+            pageBtn.onclick = () => fetchFunction(i);
+            container.appendChild(pageBtn);
         }
+
+        const nextBtn = document.createElement('button');
+        nextBtn.className = 'btn btn-outline-secondary btn-sm';
+        nextBtn.innerText = 'Вперед →';
+        nextBtn.disabled = (currentPageNumber === totalPages - 1);
+        nextBtn.onclick = () => fetchFunction(currentPageNumber + 1);
+        container.appendChild(nextBtn);
+    }
+
+    // --- GET: Загрузка всех задач (для админов/менеджеров) или своих ---
+    async function loadTasks(page = 0) {
+        currentPage = page;
+        currentFetchMode = (isAdmin || isManager) ? 'ALL' : 'MY';
+
+        const endpoint = currentFetchMode === 'ALL' ? '/api/tasks/all' : '/api/tasks/my';
+        const url = `${endpoint}?page=${page}&size=${pageSize}`;
+
         const response = await fetch(url, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
 
-        console.log('Ответ сервера:', response.status, response.ok);
-
         if (response.ok) {
-            const tasks = await response.json();
+            const data = await response.json();
+            // Поддержка и Page<T> (с content) и обычного List<T>
+            const tasks = data.content !== undefined ? data.content : data;
+
             const tbody = document.getElementById('tasksBody');
             tbody.innerHTML = '';
             tasks.forEach(task => addRowToTable(task));
-            // Убираем filterTable() – проверяем, что таблица обновляется
+
+            // Если пришли метаданные, рисуем пагинацию
+            if (data.totalPages !== undefined) {
+                renderPagination(data.totalPages, data.number, 'pagination-controls', loadTasks);
+            } else {
+                document.getElementById('pagination-controls').innerHTML = '';
+            }
         } else {
             logout();
+        }
+    }
+
+    async function loadMyTasks(page = 0) {
+        currentPage = page;
+        currentFetchMode = 'MY';
+
+        const url = `/api/tasks/my?page=${page}&size=${pageSize}`;
+        const response = await fetch(url, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            const tasks = data.content !== undefined ? data.content : data;
+
+            const tbody = document.getElementById('tasksBody');
+            tbody.innerHTML = '';
+            tasks.forEach(task => addRowToTable(task));
+
+            if (data.totalPages !== undefined) {
+                renderPagination(data.totalPages, data.number, 'pagination-controls', loadMyTasks);
+            } else {
+                document.getElementById('pagination-controls').innerHTML = '';
+            }
+        } else {
+            alert('Ошибка загрузки ваших задач');
         }
     }
 
@@ -242,7 +316,6 @@
 
         let actionButtons = `<button class="btn btn-sm btn-primary me-1" onclick="openEditModal(${task.id}, this)">Редактировать</button>`;
 
-        // Только обычные юзеры могут удалять строки напрямую
         if (!isAdmin && !isManager) {
             actionButtons += `<button class="btn btn-sm btn-danger" onclick="deleteTask(${task.id}, this)">Удалить</button>`;
         }
@@ -257,7 +330,6 @@
         tbody.appendChild(tr);
     }
 
-    // --- POST: Создание задачи ---
     document.getElementById('saveTaskBtn').addEventListener('click', async () => {
         if (isAdmin) return;
 
@@ -267,7 +339,6 @@
             status: "OPEN"
         };
 
-        // Если менеджер или админ – добавляем получателя
         if (isManager || isAdmin) {
             const assignee = document.getElementById('taskAssignee').value;
             if (assignee) {
@@ -284,19 +355,16 @@
             body: JSON.stringify(payload)
         });
 
-        console.log('Ответ сервера:', response.status, response.ok);
-
         if (response.ok) {
             bootstrap.Modal.getInstance(document.getElementById('addTaskModal')).hide();
             document.getElementById('createTaskForm').reset();
             document.getElementById('taskAssignee').value = '';
-            window.location.reload(); // Заменяем await loadTasks() на window.location.reload()
+            refreshCurrentView();
         } else {
             alert("Ошибка при сохранении задачи");
         }
     });
 
-    // --- DELETE: Удаление по кнопке в строке ---
     async function deleteTask(taskId, btnElement) {
         if (isAdmin || isManager) {
             alert("У вас нет прав на удаление задач.");
@@ -309,19 +377,15 @@
             headers: { 'Authorization': `Bearer ${token}` }
         });
 
-        console.log('Ответ сервера:', response.status, response.ok);
-
         if (response.ok) {
-            window.location.reload(); // Заменяем await loadTasks() на window.location.reload()
+            refreshCurrentView();
         } else {
             alert("Ошибка при удалении задачи");
         }
     }
 
-    // --- PUT: Открытие модалки редактирования ---
     function openEditModal(taskId, btnElement) {
         currentRowElement = btnElement.closest('tr');
-
         const currentContent = currentRowElement.querySelector('.task-content').textContent;
         const currentEmployee = currentRowElement.querySelector('.task-employee').textContent;
         const currentStatus = currentRowElement.querySelector('.task-status').textContent;
@@ -336,10 +400,8 @@
         editModal.show();
     }
 
-    // Сохранение изменений редактирования
     document.getElementById('updateTaskBtn').addEventListener('click', async () => {
         const taskId = document.getElementById('editTaskId').value;
-
         const payload = {
             content: document.getElementById('editTaskContent').value,
             fullNameEmployee: document.getElementById('editTaskEmployee').value,
@@ -355,17 +417,14 @@
             body: JSON.stringify(payload)
         });
 
-        console.log('Ответ сервера:', response.status, response.ok);
-
         if (response.ok) {
             bootstrap.Modal.getInstance(document.getElementById('editTaskModal')).hide();
-            window.location.reload(); // Заменяем await loadTasks() на window.location.reload()
+            refreshCurrentView();
         } else {
             alert("Ошибка при обновлении задачи");
         }
     });
 
-    // --- ФИЛЬТРАЦИЯ ---
     function filterTable() {
         const searchText = document.getElementById('searchInput').value.toLowerCase();
         const statusFilter = document.getElementById('statusFilter').value;
@@ -385,7 +444,6 @@
     document.getElementById('searchInput').addEventListener('input', filterTable);
     document.getElementById('statusFilter').addEventListener('change', filterTable);
 
-    // --- УДАЛЕНИЕ ПО ID ИЗ ПОЛЯ ВВОДА ---
     document.getElementById('deleteByIdBtn').addEventListener('click', async () => {
         if (isAdmin || isManager) {
             alert("У вас нет прав на удаление задач.");
@@ -406,22 +464,14 @@
             headers: { 'Authorization': `Bearer ${token}` }
         });
 
-        console.log('Ответ сервера:', response.status, response.ok);
-
         if (response.ok) {
             idInput.value = '';
-            window.location.reload(); // Заменяем await loadTasks() на window.location.reload()
+            refreshCurrentView();
             alert(`Задача ${taskId} успешно удалена.`);
         } else {
             alert("Ошибка! Возможно, задачи с таким ID не существует.");
         }
     });
-
-    // Если менеджер или админ – загружаем список пользователей и показываем селект
-    if (isManager || isAdmin) {
-        loadUsers();
-        document.getElementById('assigneeContainer').style.display = 'block';
-    }
 
     async function loadUsers() {
         try {
@@ -431,10 +481,8 @@
             if (!response.ok) throw new Error('Не удалось загрузить пользователей');
             const users = await response.json();
             const select = document.getElementById('taskAssignee');
-            // Удалить опции, кроме первой
             select.innerHTML = '<option value="">Себе</option>';
             users.forEach(user => {
-                // Исключаем самого текущего пользователя (его имя в JWT)
                 if (user.username !== decodedToken.sub) {
                     select.innerHTML += `<option value="${user.username}">${user.username}</option>`;
                 }
@@ -444,26 +492,6 @@
         }
     }
 
-    // Добавляем кнопку "Мои задачи" для менеджера
-    if (isManager) {
-        document.getElementById('navLinks').innerHTML += `<a class="nav-link" href="#" onclick="loadMyTasks()">Мои задачи</a>`;
-    }
-
-    async function loadMyTasks() {
-        const response = await fetch('/api/tasks/my', {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-        if (response.ok) {
-            const tasks = await response.json();
-            const tbody = document.getElementById('tasksBody');
-            tbody.innerHTML = '';
-            tasks.forEach(task => addRowToTable(task));
-        } else {
-            alert('Ошибка загрузки ваших задач');
-        }
-    }
-
-    // Принудительное открытие модального окна по кнопке (если data-bs-toggle не срабатывает)
     document.getElementById('addTaskBtn').addEventListener('click', function (e) {
         e.preventDefault();
         const modal = new bootstrap.Modal(document.getElementById('addTaskModal'));
