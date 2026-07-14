@@ -1,9 +1,11 @@
 package com.getquer.tasktracker.service;
 
 import com.getquer.tasktracker.DTOs.UserDTO;
+import com.getquer.tasktracker.Entities.DepartmentEntity;
 import com.getquer.tasktracker.Entities.UserEntity;
+import com.getquer.tasktracker.Repositories.DepartmentRepository;
 import com.getquer.tasktracker.Repositories.UserRepository;
-import com.getquer.tasktracker.request.SigninRequest;
+import com.getquer.tasktracker.request.SignupRequest;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -18,10 +20,12 @@ import java.util.List;
 public class UserService implements UserDetailsService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private  final DepartmentRepository departmentRepository;
 
-    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder) {
+    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder, DepartmentRepository departmentRepository) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
+        this.departmentRepository = departmentRepository;
     }
 
     public UserDTO upgradeRoleUser(Long id,String newRole){
@@ -44,19 +48,26 @@ public class UserService implements UserDetailsService {
         return new UserDTO(
                 userEntity.getId(),
                 userEntity.getUsername(),
-                userEntity.getRole()
+                userEntity.getRole(),
+                userEntity.getDepartment() != null ? userEntity.getDepartment().getName() : "Без отдела",
+                userEntity.getSeniority()
+
         );
     }
 
-    public void registerUser(SigninRequest request) {
+    public void registerUser(SignupRequest request) {
         if (userRepository.findByUsername(request.username()).isPresent()){
             throw new IllegalArgumentException("Пользователь с таким username существует");
         }
+        DepartmentEntity department = departmentRepository.findByName(request.department())
+                .orElseThrow(()-> new IllegalArgumentException("Департамент не найден "+ request.department() ));
 
         UserEntity user = new UserEntity();
         user.setUsername(request.username());
         user.setPassword(passwordEncoder.encode(request.password()));
         user.setRole("USER"); //новые юзеры всегда USER
+        user.setDepartment(department);
+        user.setSeniority(request.seniority());
 
         userRepository.save(user);
     }
