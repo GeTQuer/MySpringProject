@@ -56,7 +56,7 @@ public class UserService implements UserDetailsService {
         UserEntity user = new UserEntity();
         user.setUsername(request.username());
         user.setPassword(passwordEncoder.encode(request.password()));
-        user.setRole("USER"); // Бизнес-правило: новые юзеры всегда USER
+        user.setRole("USER"); //новые юзеры всегда USER
 
         userRepository.save(user);
     }

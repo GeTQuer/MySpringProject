@@ -16,15 +16,17 @@ public class TaskEntity {
     @Column(name = "ID")
     private Long id;
 
-    @Column(name = "Content")
+    @Column(nullable = false,name = "Content")
     private String content;
 
-    @Column(name = "employee")
+
+    @Column(nullable = false,name = "employee")
     private String fullNameEmployee;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "Status")
     private TaskStatus status;
+
 
     @Column(name = "created_at")
     private java.time.LocalDateTime createdAt;

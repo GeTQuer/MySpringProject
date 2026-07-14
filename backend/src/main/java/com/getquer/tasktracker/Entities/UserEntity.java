@@ -1,4 +1,5 @@
 package com.getquer.tasktracker.Entities;
+import com.getquer.tasktracker.Grades.Seniority;
 import jakarta.persistence.*;
 import org.hibernate.annotations.BatchSize;
 import org.springframework.security.core.GrantedAuthority;
@@ -23,6 +24,14 @@ public class UserEntity implements UserDetails {
 
     @Column(nullable = false)
     private String role;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "department_id")
+    private DepartmentEntity department;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "seniority")
+    private Seniority seniority;
     
     public UserEntity(){}
 
@@ -56,6 +65,22 @@ public class UserEntity implements UserDetails {
 
     public void setRole(String role) {
         this.role = role;
+    }
+
+    public DepartmentEntity getDepartment() {
+        return department;
+    }
+
+    public void setDepartment(DepartmentEntity department) {
+        this.department = department;
+    }
+
+    public Seniority getSeniority() {
+        return seniority;
+    }
+
+    public void setSeniority(Seniority seniority) {
+        this.seniority = seniority;
     }
 
     @Override

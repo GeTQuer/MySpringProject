@@ -58,8 +58,6 @@ public class TaskService {
         task.setContent(taskDTO.content());
         task.setFullNameEmployee(taskDTO.fullNameEmployee());
         task.setStatus(TaskStatus.valueOf(taskDTO.status()));
-
-        // Теперь targetUser — это 100% объект из базы, Hibernate без проблем возьмет его ID
         task.setUser(targetUser);
 
         TaskEntity savedTask = taskRepository.save(task);
