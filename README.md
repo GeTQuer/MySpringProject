@@ -13,6 +13,11 @@
 
 <img width="1718" height="628" alt="image" src="https://github.com/user-attachments/assets/3cc4ab90-7ed8-4613-90fb-9783b47ee455" />
 
+Список задач если их много
+
+<img width="1938" height="1268" alt="image" src="https://github.com/user-attachments/assets/609b364f-84eb-4821-9a13-d8dd6a110822" />
+
+
 🎯 Что реализовано
 
 ✅JWT-аутентификация и регистрация пользователей.
