@@ -54,6 +54,7 @@ public class SecurityConfig {
                                 "/tasks",
                                 "/tasks.html",
                                 "/api/auth/**",
+                                "/api/v1/ai/**",
                                 "/v3/api-docs",
                                 "/v3/api-docs/**",
                                 "/swagger-ui/**",
