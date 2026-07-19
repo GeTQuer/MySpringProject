@@ -1,5 +1,6 @@
 package com.getquer.tasktracker.util;
 
+import com.getquer.tasktracker.Entities.DepartmentEntity;
 import com.getquer.tasktracker.Entities.TaskEntity;
 import com.getquer.tasktracker.Entities.UserEntity;
 import com.getquer.tasktracker.TaskStatus;
@@ -11,11 +12,27 @@ import java.util.List;
 
 public class TaskTestDataMother {
 
+    public static DepartmentEntity createTestDepartment(Long id, String name) {
+        DepartmentEntity department = new DepartmentEntity();
+        department.setId(id);
+        department.setName(name);
+        return department;
+    }
+
     public static UserEntity createTestUser(Long id, String username, String role) {
         UserEntity user = new UserEntity();
         user.setId(id);
         user.setUsername(username);
         user.setRole(role);
+        return user;
+    }
+
+    public static UserEntity createTestUserWithDepartment(Long id, String username, String role, DepartmentEntity department) {
+        UserEntity user = new UserEntity();
+        user.setId(id);
+        user.setUsername(username);
+        user.setRole(role);
+        user.setDepartment(department);
         return user;
     }
 

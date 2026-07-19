@@ -1,7 +1,8 @@
 package com.getquer.tasktracker;
 
 
-import com.getquer.tasktracker.DTOs.TaskDTO;
+import com.getquer.tasktracker.responseDTO.TaskDTO;
+import com.getquer.tasktracker.Entities.DepartmentEntity;
 import com.getquer.tasktracker.Entities.TaskEntity;
 import com.getquer.tasktracker.Entities.UserEntity;
 import com.getquer.tasktracker.Repositories.TaskRepository;
@@ -19,7 +20,6 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.*;
-import org.springframework.web.client.ResourceAccessException;
 
 import java.util.List;
 import java.util.Optional;
@@ -193,14 +193,16 @@ public class TaskServiceTest {
     class UserTasksTests{
         @Test
         void getAllTasks_ShouldReturnAllTasksbyUsername(){
-            UserEntity user1 = TaskTestDataMother.createTestUser(1L, "PASHA", "USER");
+            DepartmentEntity department = TaskTestDataMother.createTestDepartment(1L, "IT");
+            UserEntity user1 = TaskTestDataMother.createTestUserWithDepartment(1L, "PASHA", "USER", department);
             TaskEntity task1 = TaskTestDataMother.createTestTask(1L, "Задача 1", TaskStatus.OPEN, user1);
             TaskEntity task2 = TaskTestDataMother.createTestTask(2L, "Задача 2", TaskStatus.OPEN, user1);
 
             List<Long> mockIds = List.of(1L,2L);
             Page<Long> mockIdsPages = new PageImpl<>(mockIds, pageable, mockIds.size());
 
-            Mockito.when(taskRepository.findAllByUserUsername(user1.getUsername(), pageable))
+            Mockito.when(userRepository.findByUsername(user1.getUsername())).thenReturn(Optional.of(user1));
+            Mockito.when(taskRepository.findAllByUserUsername(user1.getUsername(), department.getId(), pageable))
                     .thenReturn(mockIdsPages);
 
             //convertToTaskPage
@@ -216,7 +218,7 @@ public class TaskServiceTest {
             assertEquals(2, result.getTotalElements());
 
             Mockito.verify(taskRepository, Mockito.times(1))
-                    .findAllByUserUsername(user1.getUsername(), pageable);
+                    .findAllByUserUsername(user1.getUsername(), department.getId(), pageable);
 
             // Проверяем, что второй метод (JOIN FETCH) вызвался 1 раз с полученным списком ID
             Mockito.verify(taskRepository, Mockito.times(1))
@@ -225,9 +227,12 @@ public class TaskServiceTest {
 
         @Test
         void getAllTasks_ShouldReturnEmptyPage_WhenUserHasNoTasks(){
+            DepartmentEntity department = TaskTestDataMother.createTestDepartment(1L, "IT");
+            UserEntity user = TaskTestDataMother.createTestUserWithDepartment(1L, "nonexistent_user", "USER", department);
             Page<Long> emptyPage = Page.empty(pageable);
 
-            Mockito.when(taskRepository.findAllByUserUsername("nonexistent_user", pageable))
+            Mockito.when(userRepository.findByUsername("nonexistent_user")).thenReturn(Optional.of(user));
+            Mockito.when(taskRepository.findAllByUserUsername("nonexistent_user", department.getId(), pageable))
                     .thenReturn(emptyPage);
 
             Page<TaskDTO> result = taskService.getAllTasks("nonexistent_user", 0, 10);
@@ -236,19 +241,21 @@ public class TaskServiceTest {
             assertTrue(result.isEmpty());
             assertEquals(0, result.getTotalElements());
             Mockito.verify(taskRepository, Mockito.times(1))
-                    .findAllByUserUsername("nonexistent_user", pageable);
+                    .findAllByUserUsername("nonexistent_user", department.getId(), pageable);
             Mockito.verify(taskRepository, Mockito.never()).findAllByIdsWithUser(Mockito.any());
         }
 
         @Test
         void getAllTasksByStatus_ShouldReturnAllTasksByStatusAndUsername(){
-            UserEntity user1 = TaskTestDataMother.createTestUser(1L, "John", "USER");
+            DepartmentEntity department = TaskTestDataMother.createTestDepartment(1L, "IT");
+            UserEntity user1 = TaskTestDataMother.createTestUserWithDepartment(1L, "John", "USER", department);
             TaskEntity task1 = TaskTestDataMother.createTestTask(1L, "Задача 1", TaskStatus.OPEN, user1);
 
             List<Long> mockIds = List.of(1L);
             Page<Long> mockIdsPages = new PageImpl<>(mockIds, pageable, mockIds.size());
 
-            Mockito.when(taskRepository.findAllByUserUsernameAndStatus(user1.getUsername(), TaskStatus.OPEN, pageable)).
+            Mockito.when(userRepository.findByUsername(user1.getUsername())).thenReturn(Optional.of(user1));
+            Mockito.when(taskRepository.findAllByUserUsernameAndStatus(user1.getUsername(), TaskStatus.OPEN, department.getId(), pageable)).
                     thenReturn(mockIdsPages);
             Mockito.when(taskRepository.findAllByIdsWithUser(mockIds)).
                     thenReturn(List.of(task1));
@@ -259,7 +266,7 @@ public class TaskServiceTest {
             assertEquals(1, result.getTotalElements());
 
             Mockito.verify(taskRepository, Mockito.times(1))
-                    .findAllByUserUsernameAndStatus(user1.getUsername(),TaskStatus.OPEN, pageable);
+                    .findAllByUserUsernameAndStatus(user1.getUsername(),TaskStatus.OPEN, department.getId(), pageable);
 
             // Проверяем, что второй метод (JOIN FETCH) вызвался 1 раз с полученным списком ID
             Mockito.verify(taskRepository, Mockito.times(1))
@@ -268,9 +275,12 @@ public class TaskServiceTest {
 
         @Test
         void getAllTasksByStatus_ShouldReturnEmptyPage_WhenUserHasNoTasksWithStatus(){
+            DepartmentEntity department = TaskTestDataMother.createTestDepartment(1L, "IT");
+            UserEntity user = TaskTestDataMother.createTestUserWithDepartment(1L, "John", "USER", department);
             Page<Long> emptyPage = Page.empty(pageable);
 
-            Mockito.when(taskRepository.findAllByUserUsernameAndStatus("John", TaskStatus.OPEN, pageable))
+            Mockito.when(userRepository.findByUsername("John")).thenReturn(Optional.of(user));
+            Mockito.when(taskRepository.findAllByUserUsernameAndStatus("John", TaskStatus.OPEN, department.getId(), pageable))
                     .thenReturn(emptyPage);
 
             Page<TaskDTO> result = taskService.getAllTasksByStatus("John", TaskStatus.OPEN, 0, 10);
@@ -279,10 +289,255 @@ public class TaskServiceTest {
             assertTrue(result.isEmpty());
             assertEquals(0, result.getTotalElements());
             Mockito.verify(taskRepository, Mockito.times(1))
-                    .findAllByUserUsernameAndStatus("John", TaskStatus.OPEN, pageable);
+                    .findAllByUserUsernameAndStatus("John", TaskStatus.OPEN, department.getId(), pageable);
             Mockito.verify(taskRepository, Mockito.never()).findAllByIdsWithUser(Mockito.any());
         }
     }
+
+    @Nested
+    @DisplayName("Тесты задач по отделам")
+    class DepartmentTasksTests{
+        @Test
+        void getAllDepartmentTasks_ShouldReturnTasks(){
+            DepartmentEntity department = TaskTestDataMother.createTestDepartment(1L, "IT");
+            UserEntity user1 = TaskTestDataMother.createTestUserWithDepartment(1L, "PASHA", "USER", department);
+            TaskEntity task1 = TaskTestDataMother.createTestTask(1L, "Задача 1", TaskStatus.OPEN, user1);
+            TaskEntity task2 = TaskTestDataMother.createTestTask(2L, "Задача 2", TaskStatus.OPEN, user1);
+
+            List<Long> mockIds = List.of(1L,2L);
+            Page<Long> mockIdsPages = new PageImpl<>(mockIds, pageable, mockIds.size());
+
+            Mockito.when(taskRepository.findAllTasksByDepartmentId(department.getId(), pageable))
+                    .thenReturn(mockIdsPages);
+            Mockito.when(taskRepository.findAllByIdsWithUser(mockIds))
+                    .thenReturn(List.of(task1,task2));
+
+            Page<TaskDTO> result = taskService.getAllDepartmentTasks(department.getId(), 0, 10);
+
+            assertNotNull(result);
+            assertEquals(2, result.getTotalElements());
+            Mockito.verify(taskRepository, Mockito.times(1))
+                    .findAllTasksByDepartmentId(department.getId(), pageable);
+            Mockito.verify(taskRepository, Mockito.times(1))
+                    .findAllByIdsWithUser(mockIds);
+        }
+
+        @Test
+        void getAllDepartmentTasks_ShouldReturnEmptyPage_WhenNoTasks(){
+            DepartmentEntity department = TaskTestDataMother.createTestDepartment(1L, "IT");
+            Page<Long> emptyPage = Page.empty(pageable);
+
+            Mockito.when(taskRepository.findAllTasksByDepartmentId(department.getId(), pageable))
+                    .thenReturn(emptyPage);
+
+            Page<TaskDTO> result = taskService.getAllDepartmentTasks(department.getId(), 0, 10);
+
+            assertNotNull(result);
+            assertTrue(result.isEmpty());
+            assertEquals(0, result.getTotalElements());
+            Mockito.verify(taskRepository, Mockito.times(1))
+                    .findAllTasksByDepartmentId(department.getId(), pageable);
+            Mockito.verify(taskRepository, Mockito.never()).findAllByIdsWithUser(Mockito.any());
+        }
+
+        @Test
+        void getAllDepartmentTasksByStatus_ShouldReturnTasksByStatus(){
+            DepartmentEntity department = TaskTestDataMother.createTestDepartment(1L, "IT");
+            UserEntity user1 = TaskTestDataMother.createTestUserWithDepartment(1L, "John", "USER", department);
+            TaskEntity task1 = TaskTestDataMother.createTestTask(1L, "Задача 1", TaskStatus.OPEN, user1);
+
+            List<Long> mockIds = List.of(1L);
+            Page<Long> mockIdsPages = new PageImpl<>(mockIds, pageable, mockIds.size());
+
+            Mockito.when(taskRepository.findAllTasksByDepartmentIdAndStatus(department.getId(), TaskStatus.OPEN, pageable))
+                    .thenReturn(mockIdsPages);
+            Mockito.when(taskRepository.findAllByIdsWithUser(mockIds))
+                    .thenReturn(List.of(task1));
+
+            Page<TaskDTO> result = taskService.getAllDepartmentTasksByStatus(department.getId(), TaskStatus.OPEN, 0, 10);
+
+            assertNotNull(result);
+            assertEquals(1, result.getTotalElements());
+            Mockito.verify(taskRepository, Mockito.times(1))
+                    .findAllTasksByDepartmentIdAndStatus(department.getId(), TaskStatus.OPEN, pageable);
+            Mockito.verify(taskRepository, Mockito.times(1))
+                    .findAllByIdsWithUser(mockIds);
+        }
+
+        @Test
+        void getAllDepartmentTasksByStatus_ShouldReturnEmptyPage_WhenNoTasksWithStatus(){
+            DepartmentEntity department = TaskTestDataMother.createTestDepartment(1L, "IT");
+            Page<Long> emptyPage = Page.empty(pageable);
+
+            Mockito.when(taskRepository.findAllTasksByDepartmentIdAndStatus(department.getId(), TaskStatus.OPEN, pageable))
+                    .thenReturn(emptyPage);
+
+            Page<TaskDTO> result = taskService.getAllDepartmentTasksByStatus(department.getId(), TaskStatus.OPEN, 0, 10);
+
+            assertNotNull(result);
+            assertTrue(result.isEmpty());
+            assertEquals(0, result.getTotalElements());
+            Mockito.verify(taskRepository, Mockito.times(1))
+                    .findAllTasksByDepartmentIdAndStatus(department.getId(), TaskStatus.OPEN, pageable);
+            Mockito.verify(taskRepository, Mockito.never()).findAllByIdsWithUser(Mockito.any());
+        }
+    }
+
+    @Nested
+    @DisplayName("Тесты удаления для MANAGER")
+    class ManagerDeleteTests{
+        @Test
+        void deleteByIdForManager_ShouldDeleteTask_WhenTaskInSameDepartment(){
+            DepartmentEntity department = TaskTestDataMother.createTestDepartment(1L, "IT");
+            UserEntity manager = TaskTestDataMother.createTestUserWithDepartment(1L, "Manager", "MANAGER", department);
+            TaskEntity task = TaskTestDataMother.createTestTask(1L, "Задача", TaskStatus.OPEN, manager);
+            task.setDepartment(department);
+
+            Mockito.when(userRepository.findByUsername("Manager")).thenReturn(Optional.of(manager));
+            Mockito.when(taskRepository.findById(1L)).thenReturn(Optional.of(task));
+
+            taskService.deleteByIdForManager(1L, "Manager");
+
+            Mockito.verify(taskRepository, Mockito.times(1)).delete(task);
+        }
+
+        @Test
+        void deleteByIdForManager_ShouldThrowException_WhenTaskInDifferentDepartment(){
+            DepartmentEntity itDepartment = TaskTestDataMother.createTestDepartment(1L, "IT");
+            DepartmentEntity qaDepartment = TaskTestDataMother.createTestDepartment(2L, "QA");
+            UserEntity manager = TaskTestDataMother.createTestUserWithDepartment(1L, "Manager", "MANAGER", itDepartment);
+            TaskEntity task = TaskTestDataMother.createTestTask(1L, "Задача", TaskStatus.OPEN, manager);
+            task.setDepartment(qaDepartment); // Задача в другом отделе
+
+            Mockito.when(userRepository.findByUsername("Manager")).thenReturn(Optional.of(manager));
+            Mockito.when(taskRepository.findById(1L)).thenReturn(Optional.of(task));
+
+            assertThrows(RuntimeException.class, () -> taskService.deleteByIdForManager(1L, "Manager"));
+
+            Mockito.verify(taskRepository, Mockito.never()).delete(Mockito.any());
+        }
+
+        @Test
+        void deleteByIdForManager_ShouldThrowException_WhenUserNotFound(){
+            Mockito.when(userRepository.findByUsername("nonexistent")).thenReturn(Optional.empty());
+
+            assertThrows(EntityNotFoundException.class, () -> taskService.deleteByIdForManager(1L, "nonexistent"));
+
+            Mockito.verify(taskRepository, Mockito.never()).findById(Mockito.any());
+            Mockito.verify(taskRepository, Mockito.never()).delete(Mockito.any());
+        }
+
+        @Test
+        void deleteByIdForManager_ShouldThrowException_WhenTaskNotFound(){
+            DepartmentEntity department = TaskTestDataMother.createTestDepartment(1L, "IT");
+            UserEntity manager = TaskTestDataMother.createTestUserWithDepartment(1L, "Manager", "MANAGER", department);
+
+            Mockito.when(userRepository.findByUsername("Manager")).thenReturn(Optional.of(manager));
+            Mockito.when(taskRepository.findById(1L)).thenReturn(Optional.empty());
+
+            assertThrows(EntityNotFoundException.class, () -> taskService.deleteByIdForManager(1L, "Manager"));
+
+            Mockito.verify(taskRepository, Mockito.never()).delete(Mockito.any());
+        }
+    }
+
+    @Nested
+    @DisplayName("Тесты удаления для ADMIN")
+    class AdminDeleteTests{
+        @Test
+        void deleteById_ShouldDeleteTask(){
+            UserEntity user = TaskTestDataMother.createTestUser(1L, "User", "USER");
+            TaskEntity task = TaskTestDataMother.createTestTask(1L, "Задача", TaskStatus.OPEN, user);
+
+            Mockito.when(taskRepository.findById(1L)).thenReturn(Optional.of(task));
+
+            taskService.deleteById(1L);
+
+            Mockito.verify(taskRepository, Mockito.times(1)).delete(task);
+        }
+
+        @Test
+        void deleteById_ShouldThrowException_WhenTaskNotFound(){
+            Mockito.when(taskRepository.findById(1L)).thenReturn(Optional.empty());
+
+            assertThrows(EntityNotFoundException.class, () -> taskService.deleteById(1L));
+
+            Mockito.verify(taskRepository, Mockito.never()).delete(Mockito.any());
+        }
+    }
+
+    @Nested
+    @DisplayName("Тесты получения/обновления задач для MANAGER с проверкой отдела")
+    class ManagerWithDepartmentCheckTests{
+        @Test
+        void getTaskByIdForManagerWithDepartmentCheck_ShouldReturnTask_WhenTaskInSameDepartment(){
+            DepartmentEntity department = TaskTestDataMother.createTestDepartment(1L, "IT");
+            UserEntity manager = TaskTestDataMother.createTestUserWithDepartment(1L, "Manager", "MANAGER", department);
+            TaskEntity task = TaskTestDataMother.createTestTask(1L, "Задача", TaskStatus.OPEN, manager);
+            task.setDepartment(department);
+
+            Mockito.when(userRepository.findByUsername("Manager")).thenReturn(Optional.of(manager));
+            Mockito.when(taskRepository.findById(1L)).thenReturn(Optional.of(task));
+
+            TaskDTO result = taskService.getTaskByIdForManagerWithDepartmentCheck(1L, "Manager");
+
+            assertNotNull(result);
+            assertEquals("Задача", result.content());
+        }
+
+        @Test
+        void getTaskByIdForManagerWithDepartmentCheck_ShouldThrowException_WhenTaskInDifferentDepartment(){
+            DepartmentEntity itDepartment = TaskTestDataMother.createTestDepartment(1L, "IT");
+            DepartmentEntity qaDepartment = TaskTestDataMother.createTestDepartment(2L, "QA");
+            UserEntity manager = TaskTestDataMother.createTestUserWithDepartment(1L, "Manager", "MANAGER", itDepartment);
+            TaskEntity task = TaskTestDataMother.createTestTask(1L, "Задача", TaskStatus.OPEN, manager);
+            task.setDepartment(qaDepartment);
+
+            Mockito.when(userRepository.findByUsername("Manager")).thenReturn(Optional.of(manager));
+            Mockito.when(taskRepository.findById(1L)).thenReturn(Optional.of(task));
+
+            assertThrows(RuntimeException.class, () -> taskService.getTaskByIdForManagerWithDepartmentCheck(1L, "Manager"));
+        }
+
+        @Test
+        void updateTaskForManagerWithDepartmentCheck_ShouldUpdateTask_WhenTaskInSameDepartment(){
+            DepartmentEntity department = TaskTestDataMother.createTestDepartment(1L, "IT");
+            UserEntity manager = TaskTestDataMother.createTestUserWithDepartment(1L, "Manager", "MANAGER", department);
+            TaskEntity task = TaskTestDataMother.createTestTask(1L, "Задача", TaskStatus.OPEN, manager);
+            task.setDepartment(department);
+
+            TaskDTO updateDTO = new TaskDTO(1L, "Обновленная задача", "Manager", "DONE", null);
+
+            Mockito.when(userRepository.findByUsername("Manager")).thenReturn(Optional.of(manager));
+            Mockito.when(taskRepository.findById(1L)).thenReturn(Optional.of(task));
+            Mockito.when(taskRepository.save(Mockito.any(TaskEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+            TaskDTO result = taskService.updateTaskForManagerWithDepartmentCheck(1L, updateDTO, "Manager");
+
+            assertNotNull(result);
+            assertEquals("Обновленная задача", result.content());
+            assertEquals("DONE", result.status());
+        }
+
+        @Test
+        void updateTaskForManagerWithDepartmentCheck_ShouldThrowException_WhenTaskInDifferentDepartment(){
+            DepartmentEntity itDepartment = TaskTestDataMother.createTestDepartment(1L, "IT");
+            DepartmentEntity qaDepartment = TaskTestDataMother.createTestDepartment(2L, "QA");
+            UserEntity manager = TaskTestDataMother.createTestUserWithDepartment(1L, "Manager", "MANAGER", itDepartment);
+            TaskEntity task = TaskTestDataMother.createTestTask(1L, "Задача", TaskStatus.OPEN, manager);
+            task.setDepartment(qaDepartment);
+
+            TaskDTO updateDTO = new TaskDTO(1L, "Обновленная задача", "Manager", "DONE", null);
+
+            Mockito.when(userRepository.findByUsername("Manager")).thenReturn(Optional.of(manager));
+            Mockito.when(taskRepository.findById(1L)).thenReturn(Optional.of(task));
+
+            assertThrows(RuntimeException.class, () -> taskService.updateTaskForManagerWithDepartmentCheck(1L, updateDTO, "Manager"));
+
+            Mockito.verify(taskRepository, Mockito.never()).save(Mockito.any());
+        }
+    }
+
     @Nested
     @DisplayName("Примитивные методы")
     class simpleMethods{

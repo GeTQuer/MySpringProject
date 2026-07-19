@@ -1,4 +1,4 @@
-package com.getquer.tasktracker.request;
+package com.getquer.tasktracker.requestDTO;
 
 import jakarta.validation.constraints.NotBlank;
 

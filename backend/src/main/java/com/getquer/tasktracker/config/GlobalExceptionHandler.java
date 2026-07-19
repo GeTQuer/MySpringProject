@@ -1,4 +1,4 @@
-package com.getquer.tasktracker;
+package com.getquer.tasktracker.config;
 
 import jakarta.persistence.EntityNotFoundException;
 import org.slf4j.Logger;
@@ -12,8 +12,6 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 
 import java.util.HashMap;
 import java.util.Map;
-
-import lombok.extern.slf4j.Slf4j;
 
 @ControllerAdvice
 public class GlobalExceptionHandler {

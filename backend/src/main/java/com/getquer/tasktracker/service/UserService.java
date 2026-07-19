@@ -1,11 +1,11 @@
 package com.getquer.tasktracker.service;
 
-import com.getquer.tasktracker.DTOs.UserDTO;
+import com.getquer.tasktracker.responseDTO.UserDTO;
 import com.getquer.tasktracker.Entities.DepartmentEntity;
 import com.getquer.tasktracker.Entities.UserEntity;
 import com.getquer.tasktracker.Repositories.DepartmentRepository;
 import com.getquer.tasktracker.Repositories.UserRepository;
-import com.getquer.tasktracker.request.SignupRequest;
+import com.getquer.tasktracker.requestDTO.SignupRequest;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;

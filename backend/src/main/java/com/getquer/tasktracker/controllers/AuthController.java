@@ -1,9 +1,10 @@
 package com.getquer.tasktracker.controllers;
 
-import com.getquer.tasktracker.request.SigninRequest;
-import com.getquer.tasktracker.request.SignupRequest;
+import com.getquer.tasktracker.requestDTO.SigninRequest;
+import com.getquer.tasktracker.requestDTO.SignupRequest;
 import com.getquer.tasktracker.service.AuthService;
 import com.getquer.tasktracker.service.UserService;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 
 import org.springframework.web.bind.annotation.PostMapping;
@@ -25,12 +26,12 @@ public class AuthController {
 
     // Принимает логин и пароль в  json формате
     @PostMapping("/login")
-    public ResponseEntity<String> login(@RequestBody SigninRequest request){
+    public ResponseEntity<String> login(@Valid @RequestBody SigninRequest request){
         return ResponseEntity.ok(authService.authenticate(request));
     }
 
     @PostMapping("/register")
-    public ResponseEntity<String> register(@RequestBody SignupRequest request){
+    public ResponseEntity<String> register(@Valid @RequestBody SignupRequest request){
         try {
             userService.registerUser(request);
             return ResponseEntity.ok("Пользователь зарегистрирован!");

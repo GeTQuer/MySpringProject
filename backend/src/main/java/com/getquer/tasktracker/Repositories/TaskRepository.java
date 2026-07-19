@@ -21,19 +21,21 @@ import java.util.Optional;
 public interface TaskRepository extends JpaRepository<TaskEntity, Long>
 {
 
+
     @Query(
-            value = "SELECT t.id FROM TaskEntity t JOIN t.user u WHERE t.status = :status AND u.username = :username",
-            countQuery = "SELECT COUNT(t) FROM TaskEntity t JOIN t.user u WHERE t.status = :status AND u.username = :username"
+            value = "SELECT t.id FROM TaskEntity t JOIN t.user u WHERE t.status = :status AND t.user.username = :username and t.department.id = :departmentId",
+            countQuery = "SELECT COUNT(t) FROM TaskEntity t JOIN t.user u WHERE t.status = :status AND t.user.username = :username and t.department.id = :departmentId"
     )
     Page<Long> findAllByUserUsernameAndStatus(@Param("username") String username,
                                               @Param("status") TaskStatus status,
+                                              @Param("departmentId") Long departmentId,
                                               Pageable pageable);
 
     @Query(
-            value = "SELECT t.id FROM TaskEntity t JOIN t.user u WHERE u.username = :username",
-            countQuery = "SELECT COUNT(t) FROM TaskEntity t WHERE t.user.username = :username"
+            value = "SELECT t.id FROM TaskEntity t JOIN t.user u WHERE t.user.username = :username and t.department.id = :departmentId",
+            countQuery = "SELECT COUNT(t) FROM TaskEntity t JOIN t.user u WHERE t.user.username = :username and t.department.id = :departmentId"
     )
-    Page<Long> findAllByUserUsername(@Param("username") String username, Pageable pageable);
+    Page<Long> findAllByUserUsername(@Param("username") String username,@Param("departmentId") Long departmentId, Pageable pageable);
 
     @Query(
             value = "SELECT t.id FROM TaskEntity t WHERE t.status = :status",
@@ -45,6 +47,8 @@ public interface TaskRepository extends JpaRepository<TaskEntity, Long>
             value = "SELECT t.id FROM TaskEntity t",
             countQuery = "SELECT COUNT(t) FROM TaskEntity t"
     )
+
+
     Page<Long> findAllIds(Pageable pageable);
 
     @Query("SELECT t FROM TaskEntity t JOIN FETCH t.user WHERE t.id IN :ids")
@@ -66,9 +70,20 @@ public interface TaskRepository extends JpaRepository<TaskEntity, Long>
             "AND t.deadline < :threseholDate")
     void deleteOldOverdueTasks(@Param("threseholDate") LocalDateTime threseholDate);
 
+
+
     @Query(
             value = "SELECT t.id FROM TaskEntity t JOIN t.department d WHERE d.id = :id",
-            countQuery = "SELECT COUNT(t) FROM TaskEntity t JOIN t.department d WHERE d.id = :id "
+            countQuery = "SELECT COUNT(t) FROM TaskEntity t JOIN t.department d WHERE d.id = :id"
     )
     Page<Long> findAllTasksByDepartmentId(@Param("id") Long id, Pageable pageable);
+
+    @Query(
+            value = "SELECT t.id FROM TaskEntity t JOIN t.department d WHERE d.id = :id and t.status = :status",
+            countQuery =  "SELECT COUNT(t) FROM TaskEntity t JOIN t.department d WHERE d.id = :id and t.status = :status"
+    )
+    Page<Long> findAllTasksByDepartmentIdAndStatus(@Param("id") Long id, @Param("status") TaskStatus status, Pageable pageable);
+
+
+
 }

@@ -1,4 +1,4 @@
-package com.getquer.tasktracker.request;
+package com.getquer.tasktracker.requestDTO;
 
 import com.getquer.tasktracker.Grades.Seniority;
 import jakarta.validation.constraints.NotBlank;

@@ -1,9 +1,8 @@
 package com.getquer.tasktracker.service;
 
 
-import com.getquer.tasktracker.request.SigninRequest;
+import com.getquer.tasktracker.requestDTO.SigninRequest;
 import com.getquer.tasktracker.security.JwtCore;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
