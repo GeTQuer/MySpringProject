@@ -3,6 +3,11 @@ package com.getquer.tasktracker.util;
 import com.getquer.tasktracker.Entities.TaskEntity;
 import com.getquer.tasktracker.Entities.UserEntity;
 import com.getquer.tasktracker.TaskStatus;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
+
+import java.util.List;
 
 public class TaskTestDataMother {
 
@@ -23,4 +28,5 @@ public class TaskTestDataMother {
         task.setFullNameEmployee(user.getUsername());
         return task;
     }
+
 }

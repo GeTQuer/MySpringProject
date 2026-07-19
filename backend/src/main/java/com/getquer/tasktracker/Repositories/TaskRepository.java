@@ -65,4 +65,10 @@ public interface TaskRepository extends JpaRepository<TaskEntity, Long>
     @Query("DELETE FROM TaskEntity t WHERE t.status = 'OVERDUE'" +
             "AND t.deadline < :threseholDate")
     void deleteOldOverdueTasks(@Param("threseholDate") LocalDateTime threseholDate);
+
+    @Query(
+            value = "SELECT t.id FROM TaskEntity t JOIN t.department d WHERE d.id = :id",
+            countQuery = "SELECT COUNT(t) FROM TaskEntity t JOIN t.department d WHERE d.id = :id "
+    )
+    Page<Long> findAllTasksByDepartmentId(@Param("id") Long id, Pageable pageable);
 }

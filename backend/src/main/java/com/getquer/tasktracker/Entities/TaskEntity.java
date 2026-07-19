@@ -49,6 +49,18 @@ public class TaskEntity {
     @JoinColumn(name = "user_id",nullable = false)
     private UserEntity user;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "department_id",nullable = true)
+    private  DepartmentEntity department;
+
+    public DepartmentEntity getDepartment() {
+        return department;
+    }
+
+    public void setDepartment(DepartmentEntity department) {
+        this.department = department;
+    }
+
     public UserEntity getUser() {
         return user;
     }

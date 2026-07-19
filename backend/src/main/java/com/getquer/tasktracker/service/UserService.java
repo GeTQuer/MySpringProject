@@ -60,7 +60,7 @@ public class UserService implements UserDetailsService {
             throw new IllegalArgumentException("Пользователь с таким username существует");
         }
         DepartmentEntity department = departmentRepository.findByName(request.department())
-                .orElseThrow(()-> new IllegalArgumentException("Департамент не найден "+ request.department() ));
+                .orElseThrow(()-> new IllegalArgumentException("Департамент не найден "+ request.department()));
 
         UserEntity user = new UserEntity();
         user.setUsername(request.username());
