@@ -32,6 +32,7 @@ services:
       DB_NAME: ${DB_NAME}
       DB_USERNAME: ${DB_USERNAME}
       DB_PASSWORD: ${DB_PASSWORD}
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
       DB_PORT: 5432      # Внутри контейнера порт всегда 5432, а не внешний ${DB_PORT}
     ports:
       - "8080:8080"
