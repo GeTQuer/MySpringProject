@@ -86,6 +86,11 @@ public class TaskController {
             Authentication authentication
     ){
         UserEntity manager = userRepository.findByUsername(authentication.getName()).orElseThrow();
+
+        if (manager.getDepartment() == null) {
+            throw new RuntimeException("Manager must be assigned to a department");
+        }
+
         Long departmentId = manager.getDepartment().getId();
         if (status != null){
             return ResponseEntity.ok(taskService.getAllDepartmentTasksByStatus(departmentId,status,page,size));

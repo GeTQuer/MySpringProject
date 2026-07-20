@@ -30,7 +30,7 @@
             font-size: 24px;
             margin-top: 0;
         }
-        input {
+        input, select {
             padding: 10px;
             border-radius: 4px;
             border: none;
@@ -69,6 +69,23 @@
     <h2>Регистрация</h2>
     <input type="text" id="username" placeholder="Логин" required>
     <input type="password" id="password" placeholder="Пароль" required>
+    <select id="department" required>
+        <option value="" disabled selected>Выберите отдел</option>
+        <option value="AI DEPARTMENT">AI DEPARTMENT</option>
+        <option value="BACKEND DEPARTMENT">BACKEND DEPARTMENT</option>
+        <option value="FRONTEND DEPARTMENT">FRONTEND DEPARTMENT</option>
+        <option value="QA DEPARTMENT">QA DEPARTMENT</option>
+        <option value="DEVOPS DEPARTMENT">DEVOPS DEPARTMENT</option>
+        <option value="INFOSEC DEPARTMENT">INFOSEC DEPARTMENT</option>
+    </select>
+    <select id="seniority" required>
+        <option value="" disabled selected>Выберите грейд</option>
+        <option value="INTERN">INTERN</option>
+        <option value="JUNIOR">JUNIOR</option>
+        <option value="MIDDLE">MIDDLE</option>
+        <option value="SENIOR">SENIOR</option>
+        <option value="TEAM_LEAD">TEAM_LEAD</option>
+    </select>
     <button type="submit">Зарегистрироваться</button>
     <a href="/login">Уже есть аккаунт? Войти</a>
 </form>
@@ -81,13 +98,15 @@
         // 2. Собираем данные
         const username = document.getElementById('username').value;
         const password = document.getElementById('password').value;
+        const department = document.getElementById('department').value;
+        const seniority = document.getElementById('seniority').value;
 
         try {
             // 3. Отправляем POST запрос на наш API
             const response = await fetch('/api/auth/register', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username, password })
+                body: JSON.stringify({ username, password, department, seniority })
             });
 
             // 4. Обрабатываем ответ

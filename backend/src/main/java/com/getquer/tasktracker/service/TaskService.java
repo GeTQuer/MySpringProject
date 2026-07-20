@@ -58,6 +58,7 @@ public class TaskService {
         task.setFullNameEmployee(taskDTO.fullNameEmployee());
         task.setStatus(TaskStatus.valueOf(taskDTO.status()));
         task.setUser(targetUser);
+        task.setDepartment(creator.getDepartment());
 
         TaskEntity savedTask = taskRepository.save(task);
         return mapToDTO(savedTask);
@@ -79,6 +80,13 @@ public class TaskService {
 
         UserEntity user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new EntityNotFoundException("User not found"));
+
+        // Если у пользователя нет отдела, возвращаем только его задачи без фильтрации по отделу
+        if (user.getDepartment() == null) {
+            Page<Long> idPages = taskRepository.findAllByUserUsername(username, null, pageable);
+            return convertToTaskPage(idPages, pageable);
+        }
+
         Long currentDepartmentId = user.getDepartment().getId();
         Page<Long> idPages = taskRepository.findAllByUserUsername(username,currentDepartmentId,pageable);
         return convertToTaskPage(idPages,pageable);
@@ -88,6 +96,13 @@ public class TaskService {
         Pageable pageable = PageRequest.of(page,size,Sort.by("id").descending());
         UserEntity user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new EntityNotFoundException("User not found"));
+
+        // Если у пользователя нет отдела, возвращаем только его задачи без фильтрации по отделу
+        if (user.getDepartment() == null) {
+            Page<Long> idPages = taskRepository.findAllByUserUsernameAndStatus(username, status, null, pageable);
+            return convertToTaskPage(idPages, pageable);
+        }
+
         Long currentDepartmentId = user.getDepartment().getId();
         Page<Long> idPages = taskRepository.findAllByUserUsernameAndStatus(username,status,currentDepartmentId,pageable);
         return convertToTaskPage(idPages,pageable);
@@ -132,6 +147,11 @@ public class TaskService {
     public TaskDTO getTaskByIdForManagerWithDepartmentCheck(Long id, String username) {
         UserEntity manager = userRepository.findByUsername(username)
                 .orElseThrow(() -> new EntityNotFoundException("User not found"));
+
+        if (manager.getDepartment() == null) {
+            throw new RuntimeException("Manager must be assigned to a department");
+        }
+
         Long departmentId = manager.getDepartment().getId();
 
         TaskEntity task = taskRepository.findById(id)
@@ -159,6 +179,11 @@ public class TaskService {
     public TaskDTO updateTaskForManagerWithDepartmentCheck(Long id, TaskDTO updateData, String username) {
         UserEntity manager = userRepository.findByUsername(username)
                 .orElseThrow(() -> new EntityNotFoundException("User not found"));
+
+        if (manager.getDepartment() == null) {
+            throw new RuntimeException("Manager must be assigned to a department");
+        }
+
         Long departmentId = manager.getDepartment().getId();
 
         TaskEntity task = taskRepository.findById(id)
@@ -190,6 +215,11 @@ public class TaskService {
     public void deleteByIdForManager(Long id, String username) {
         UserEntity manager = userRepository.findByUsername(username)
                 .orElseThrow(() -> new EntityNotFoundException("User not found"));
+
+        if (manager.getDepartment() == null) {
+            throw new RuntimeException("Manager must be assigned to a department");
+        }
+
         Long departmentId = manager.getDepartment().getId();
 
         TaskEntity task = taskRepository.findById(id)

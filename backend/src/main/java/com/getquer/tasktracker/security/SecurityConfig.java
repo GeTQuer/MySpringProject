@@ -61,9 +61,7 @@ public class SecurityConfig {
                                 "/swagger-ui.html",
                                 "/error",
                                 "/admin",
-                                "/admin-panel.html",
-                                "/api/tasks/my",
-                                "/api/tasks/all"
+                                "/admin-panel.html"
                         ).permitAll()
                         .anyRequest().authenticated()
                 )

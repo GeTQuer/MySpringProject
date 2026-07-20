@@ -89,48 +89,66 @@
 </div>
 
 <script>
+    console.log("Login script loaded");
+
     // Находим форму по ID и "слушаем" событие её отправки (submit)
-    document.getElementById('loginForm').addEventListener('submit', async (e) => {
-        // Отменяем стандартное поведение браузера (чтобы страница не перезагружалась)
-        e.preventDefault();
+    const loginForm = document.getElementById('loginForm');
+    if (loginForm) {
+        console.log("Login form found, adding event listener");
+        loginForm.addEventListener('submit', async (e) => {
+            console.log("Form submit event triggered");
+            // Отменяем стандартное поведение браузера (чтобы страница не перезагружалась)
+            e.preventDefault();
 
-        // Считываем то, что пользователь ввел в поля
-        const username = document.getElementById('username').value;
-        const password = document.getElementById('password').value;
+            // Считываем то, что пользователь ввел в поля
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
 
-        try {
-            // Отправляем POST запрос в Java
-            const response = await fetch('/api/auth/login', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                // Превращаем переменные в строку JSON
-                body: JSON.stringify({ username: username, password: password })
-            });
+            console.log("Attempting login for user:", username);
 
-            // Если статус 200 OK
-            if (response.ok) {
-                // Читаем ответ от Java как обычный текст
-                const textData = await response.text();
+            try {
+                // Отправляем POST запрос в Java
+                const response = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    // Превращаем переменные в строку JSON
+                    body: JSON.stringify({ username: username, password: password })
+                });
 
-                let finalToken = textData;
-                // Если Java всё-таки отдает JSON формата {"token": "eyJ..."}, достаем из него
-                if (textData.startsWith("{")) {
-                    finalToken = JSON.parse(textData).token;
+                console.log("Login response status:", response.status);
+
+                // Если статус 200 OK
+                if (response.ok) {
+                    // Читаем ответ от Java как обычный текст
+                    const textData = await response.text();
+
+                    let finalToken = textData;
+                    // Если Java всё-таки отдает JSON формата {"token": "eyJ..."}, достаем из него
+                    if (textData.startsWith("{")) {
+                        finalToken = JSON.parse(textData).token;
+                    }
+
+                    console.log("Token received, saving to session storage");
+                    // Сохраняем токен в память браузера
+                    sessionStorage.setItem('jwt_token', finalToken);
+                    // Перенаправляем на страницу задач
+                    console.log("Redirecting to tasks.html");
+                    window.location.href = '/tasks.html';
+                } else {
+                    console.log("Login failed with status:", response.status);
+                    // Показываем блок с ошибкой
+                    document.getElementById('errorBox').textContent = "Неверный логин или пароль";
+                    document.getElementById('errorBox').classList.remove('d-none');
                 }
-
-                // Сохраняем токен в память браузера
-                sessionStorage.setItem('jwt_token', finalToken);
-                // Перенаправляем на страницу задач
-                window.location.href = '/tasks.html';
-            } else {
-                // Показываем блок с ошибкой
-                document.getElementById('errorBox').textContent = "Неверный логин или пароль";
+            } catch (err) {
+                console.error("Ошибка сети", err);
+                document.getElementById('errorBox').textContent = "Ошибка соединения с сервером";
                 document.getElementById('errorBox').classList.remove('d-none');
             }
-        } catch (err) {
-            console.error("Ошибка сети", err);
-        }
-    });
+        });
+    } else {
+        console.error("Login form not found!");
+    }
 </script>
 </body>
 </html>

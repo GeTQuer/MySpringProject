@@ -197,14 +197,13 @@
             document.getElementById('addTaskBtn').style.display = 'none';
             document.getElementById('adminDeleteBlock').style.display = 'none';
             document.getElementById('navLinks').innerHTML += `<a class="nav-link admin-nav-btn" href="/admin">⚙️ Админ панель</a>`;
+            loadUsers();
+            document.getElementById('assigneeContainer').style.display = 'block';
         } else if (isManager) {
             document.getElementById('adminDeleteBlock').style.display = 'none';
             document.getElementById('navLinks').innerHTML += `<a class="nav-link" href="#" onclick="loadMyTasks(0)">Мои задачи</a>`;
-        }
-
-        if (isManager || isAdmin) {
-            loadUsers();
-            document.getElementById('assigneeContainer').style.display = 'block';
+            // Менеджеры могут назначать задачи только себе (без выбора пользователей)
+            document.getElementById('assigneeContainer').style.display = 'none';
         }
 
         loadTasks(0);
@@ -216,7 +215,7 @@
     }
 
     function refreshCurrentView() {
-        if (currentFetchMode === 'ALL') loadTasks(currentPage);
+        if (currentFetchMode === 'ALL' || currentFetchMode === 'DEPARTMENT') loadTasks(currentPage);
         else loadMyTasks(currentPage);
     }
 
@@ -251,12 +250,22 @@
         container.appendChild(nextBtn);
     }
 
-    // --- GET: Загрузка всех задач (для админов/менеджеров) или своих ---
+    // --- GET: Загрузка всех задач (для админов) или задач отдела (для менеджеров) или своих ---
     async function loadTasks(page = 0) {
         currentPage = page;
-        currentFetchMode = (isAdmin || isManager) ? 'ALL' : 'MY';
 
-        const endpoint = currentFetchMode === 'ALL' ? '/api/tasks/all' : '/api/tasks/my';
+        let endpoint;
+        if (isAdmin) {
+            currentFetchMode = 'ALL';
+            endpoint = '/api/tasks/all';
+        } else if (isManager) {
+            currentFetchMode = 'DEPARTMENT';
+            endpoint = '/api/tasks/department';
+        } else {
+            currentFetchMode = 'MY';
+            endpoint = '/api/tasks/my';
+        }
+
         const url = `${endpoint}?page=${page}&size=${pageSize}`;
 
         const response = await fetch(url, {
@@ -366,10 +375,39 @@
     });
 
     async function deleteTask(taskId, btnElement) {
-        if (isAdmin || isManager) {
-            alert("У вас нет прав на удаление задач.");
+        if (isAdmin) {
+            if (!confirm("Точно удалить?")) return;
+
+            const response = await fetch(`/api/tasks/admin/${taskId}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+
+            if (response.ok) {
+                refreshCurrentView();
+            } else {
+                alert("Ошибка при удалении задачи");
+            }
             return;
         }
+
+        if (isManager) {
+            if (!confirm("Точно удалить?")) return;
+
+            const response = await fetch(`/api/tasks/manager/${taskId}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+
+            if (response.ok) {
+                refreshCurrentView();
+            } else {
+                alert("Ошибка при удалении задачи");
+            }
+            return;
+        }
+
+        // Обычный пользователь
         if (!confirm("Точно удалить?")) return;
 
         const response = await fetch(`/api/tasks/${taskId}`, {
@@ -384,20 +422,36 @@
         }
     }
 
-    function openEditModal(taskId, btnElement) {
+    async function openEditModal(taskId, btnElement) {
         currentRowElement = btnElement.closest('tr');
-        const currentContent = currentRowElement.querySelector('.task-content').textContent;
-        const currentEmployee = currentRowElement.querySelector('.task-employee').textContent;
-        const currentStatus = currentRowElement.querySelector('.task-status').textContent;
 
-        document.getElementById('editTaskId').value = taskId;
-        document.getElementById('editTaskIdLabel').textContent = taskId;
-        document.getElementById('editTaskContent').value = currentContent;
-        document.getElementById('editTaskEmployee').value = currentEmployee;
-        document.getElementById('editTaskStatus').value = currentStatus;
+        let endpoint;
+        if (isAdmin) {
+            endpoint = `/api/tasks/admin/${taskId}`;
+        } else if (isManager) {
+            endpoint = `/api/tasks/department/${taskId}`;
+        } else {
+            endpoint = `/api/tasks/${taskId}`;
+        }
 
-        const editModal = new bootstrap.Modal(document.getElementById('editTaskModal'));
-        editModal.show();
+        const response = await fetch(endpoint, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        if (response.ok) {
+            const task = await response.json();
+
+            document.getElementById('editTaskId').value = taskId;
+            document.getElementById('editTaskIdLabel').textContent = taskId;
+            document.getElementById('editTaskContent').value = task.content;
+            document.getElementById('editTaskEmployee').value = task.fullNameEmployee;
+            document.getElementById('editTaskStatus').value = task.status;
+
+            const editModal = new bootstrap.Modal(document.getElementById('editTaskModal'));
+            editModal.show();
+        } else {
+            alert("Ошибка при загрузке задачи для редактирования");
+        }
     }
 
     document.getElementById('updateTaskBtn').addEventListener('click', async () => {
@@ -408,7 +462,16 @@
             status: document.getElementById('editTaskStatus').value
         };
 
-        const response = await fetch(`/api/tasks/${taskId}`, {
+        let endpoint;
+        if (isAdmin) {
+            endpoint = `/api/tasks/admin/${taskId}`;
+        } else if (isManager) {
+            endpoint = `/api/tasks/department/${taskId}`;
+        } else {
+            endpoint = `/api/tasks/${taskId}`;
+        }
+
+        const response = await fetch(endpoint, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
@@ -474,6 +537,12 @@
     });
 
     async function loadUsers() {
+        // Только админы могут загружать всех пользователей
+        if (!isAdmin) {
+            console.log('Only admins can load all users');
+            return;
+        }
+
         try {
             const response = await fetch('/api/tasks/users', {
                 headers: { 'Authorization': `Bearer ${token}` }
