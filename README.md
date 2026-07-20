@@ -76,27 +76,33 @@ src/main/java/com/getquer/tasktracker
 
 ## Схема БД
 
-```erDiagram
-    USER ||--o{ TASK : owns
+```mermaid
+erDiagram
     DEPARTMENT ||--o{ USER : contains
     DEPARTMENT ||--o{ TASK : contains
+    USER ||--o{ TASK : owns
+
+    DEPARTMENT {
+        Long id PK
+        String name
+    }
 
     USER {
-        Long id
+        Long id PK
         String username
         String password
         String role
         String seniority
-        Long department_id
+        Long department_id FK
     }
 
     TASK {
-        Long id
+        Long id PK
         String content
         String fullNameEmployee
         String status
-        Long user_id
-        Long department_id
+        Long user_id FK
+        Long department_id FK
     }
 ```
 
