@@ -34,7 +34,11 @@
 
 ✅DTO-маппинг для безопасной передачи данных.
 
-✅Реализовано решение проблемы N+1 
+✅Реализовано решение проблемы N+1.
+
+✅ Интеграция Redis (`@Cacheable`) для моментальной отдачи частых запросов и оптимизации нагрузки на БД для AI.
+
+✅ Продвинутая ролевая модель доступа (RBAC)
 
 🔒 Безопасность и изоляция данных
 
@@ -60,40 +64,45 @@
 
 ```text
 src/main/java/com/getquer/tasktracker
-├── controller
-|
-├── service
-|
-├── repository
-├── DTOS
-|
-├── entity
-|
-├── dto
-|
-├── security
-|
-└── config
+├── config             # Конфигурации Security, Redis, Swagger и GlobalExceptionHandler
+├── controller         # REST-контроллеры с разделением по ролям
+├── service            # Бизнес-логика и кэширование
+├── repository         # JpaRepository с пагинацией и кастомными запросами
+├── entity             # Сущности базы данных
+├── requestDTO         # Валидируемые DTO для входящих данных
+├── responseDTO        # DTO для безопасной отправки ответов
+└── security           # Фильтры JWT и настройка контекста
 ```
+
 ## Схема БД
 
 ```mermaid
 erDiagram
+    DEPARTMENT ||--o{ USER : contains
+    DEPARTMENT ||--o{ TASK : contains
     USER ||--o{ TASK : owns
 
+    DEPARTMENT {
+        Long id PK
+        String name
+    }
+
     USER {
-        Long id
+        Long id PK
         String username
         String password
         String role
+        String seniority
+        Long department_id FK
     }
 
     TASK {
-        Long id
+        Long id PK
         String content
         String fullNameEmployee
         String status
-        Long user_id
+        Long user_id FK
+        Long department_id FK
     }
 ```
 
@@ -102,10 +111,11 @@ erDiagram
 ### Backend
 
 - Java 17+
-- Spring Boot (Web, Data JPA, Security)
+- Spring Boot (Web, Data JPA, Security, AI)
 - PostgreSQL
 - Hibernate
 - Maven
+- Redis
 
 ### Frontend
 
@@ -133,9 +143,13 @@ Maven
    
 2. Настройте подключение к базе данных в файле src/main/resources/application.properties:
    ```properties
-   spring.datasource.url=jdbc:postgresql://localhost:5432/tasktracker
-   spring.datasource.username=your_user
-   spring.datasource.password=your_password
+  spring.datasource.url=jdbc:postgresql://localhost:5432/tasktracker
+  spring.datasource.username=your_user
+  spring.datasource.password=your_password
+  spring.data.redis.host=localhost
+  spring.ai.google.genai.api-key= ВАШ API
+  spring.ai.google.genai.chat.options.model= ВАША МОДЕЛЬ
+  
    ```
    
 3. Соберите и запустите приложение:
@@ -148,7 +162,7 @@ Maven
    ```text
    http://localhost:8080/login
    ```
-## Установка и запуск c docker-compose
+## Установка и запуск c docker-compose (ПЕРЕД ЗАПУСКОМ ВВЕДИТЕ КОНФИГУРАЦИОННЫЕ ДАННЫЕ В .env!!!)
 1. Введите команду
    ```
    docker-compose up --build
