@@ -23,8 +23,8 @@ public interface TaskRepository extends JpaRepository<TaskEntity, Long>
 
 
     @Query(
-            value = "SELECT t.id FROM TaskEntity t JOIN t.user u WHERE t.status = :status AND t.user.username = :username and t.department.id = :departmentId",
-            countQuery = "SELECT COUNT(t) FROM TaskEntity t JOIN t.user u WHERE t.status = :status AND t.user.username = :username and t.department.id = :departmentId"
+            value = "SELECT t.id FROM TaskEntity t JOIN t.user u LEFT JOIN t.department d WHERE t.status = :status AND u.username = :username AND (:departmentId IS NULL OR d.id = :departmentId)",
+            countQuery = "SELECT COUNT(t) FROM TaskEntity t JOIN t.user u LEFT JOIN t.department d WHERE t.status = :status AND u.username = :username AND (:departmentId IS NULL OR d.id = :departmentId)"
     )
     Page<Long> findAllByUserUsernameAndStatus(@Param("username") String username,
                                               @Param("status") TaskStatus status,
@@ -32,10 +32,12 @@ public interface TaskRepository extends JpaRepository<TaskEntity, Long>
                                               Pageable pageable);
 
     @Query(
-            value = "SELECT t.id FROM TaskEntity t JOIN t.user u WHERE t.user.username = :username and t.department.id = :departmentId",
-            countQuery = "SELECT COUNT(t) FROM TaskEntity t JOIN t.user u WHERE t.user.username = :username and t.department.id = :departmentId"
+            value = "SELECT t.id FROM TaskEntity t JOIN t.user u LEFT JOIN t.department d WHERE u.username = :username AND (:departmentId IS NULL OR d.id = :departmentId)",
+            countQuery = "SELECT COUNT(t) FROM TaskEntity t JOIN t.user u LEFT JOIN t.department d WHERE u.username = :username AND (:departmentId IS NULL OR d.id = :departmentId)"
     )
-    Page<Long> findAllByUserUsername(@Param("username") String username,@Param("departmentId") Long departmentId, Pageable pageable);
+    Page<Long> findAllByUserUsername(@Param("username") String username,
+                                     @Param("departmentId") Long departmentId,
+                                     Pageable pageable);
 
     @Query(
             value = "SELECT t.id FROM TaskEntity t WHERE t.status = :status",
@@ -54,9 +56,12 @@ public interface TaskRepository extends JpaRepository<TaskEntity, Long>
     @Query("SELECT t FROM TaskEntity t JOIN FETCH t.user WHERE t.id IN :ids")
     List<TaskEntity> findAllByIdsWithUser(@Param("ids") List<Long> ids);
 
-
-    Optional<TaskEntity> findByIdAndUserUsername(Long id, String username);
-
+    @Query("SELECT t FROM TaskEntity t WHERE t.id = :id AND t.user.username = :username AND t.department.id = :departmentId")
+    Optional<TaskEntity> findByIdAndUsernameAndDepartmentId(
+            @Param("id") Long id,
+            @Param("username") String username,
+            @Param("departmentId") Long departmentId
+    );
     @Modifying
     @Transactional
     @Query("Update TaskEntity t SET t.status = 'OVERDUE'" +
@@ -76,6 +81,8 @@ public interface TaskRepository extends JpaRepository<TaskEntity, Long>
             value = "SELECT t.id FROM TaskEntity t JOIN t.department d WHERE d.id = :id",
             countQuery = "SELECT COUNT(t) FROM TaskEntity t JOIN t.department d WHERE d.id = :id"
     )
+
+
     Page<Long> findAllTasksByDepartmentId(@Param("id") Long id, Pageable pageable);
 
     @Query(

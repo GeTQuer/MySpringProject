@@ -77,27 +77,20 @@ public class TaskController {
         return ResponseEntity.ok(users);
     }
 
-    @PreAuthorize("hasRole('MANAGER')")
     @GetMapping("/department")
     public ResponseEntity<Page<TaskDTO>> getDepartmentTasks(
-            @RequestParam(value = "status",required = false) TaskStatus status,
+            @RequestParam(value = "status", required = false) TaskStatus status,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
             Authentication authentication
     ){
-        UserEntity manager = userRepository.findByUsername(authentication.getName()).orElseThrow();
+        String username = authentication.getName();
 
-        if (manager.getDepartment() == null) {
-            throw new RuntimeException("Manager must be assigned to a department");
-        }
-
-        Long departmentId = manager.getDepartment().getId();
         if (status != null){
-            return ResponseEntity.ok(taskService.getAllDepartmentTasksByStatus(departmentId,status,page,size));
+            return ResponseEntity.ok(taskService.getAllDepartmentTasksByStatus(username, status, page, size));
         }
-        return ResponseEntity.ok(taskService.getAllDepartmentTasks(departmentId,page,size));
+        return ResponseEntity.ok(taskService.getAllDepartmentTasks(username, page, size));
     }
-
 
 
     @DeleteMapping("/{id}")
@@ -154,14 +147,14 @@ public class TaskController {
     @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/admin/{id}")
     public ResponseEntity<TaskDTO> getAdminTask(@PathVariable("id") Long id) {
-        return ResponseEntity.ok(taskService.getTaskByIdForManager(id));
+        return ResponseEntity.ok(taskService.getTaskByIdForAdmin(id));
     }
 
     @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/admin/{id}")
     public ResponseEntity<TaskDTO> updateAdminTask(@PathVariable("id") Long id,
                                                    @Valid @RequestBody TaskDTO taskDTO) {
-        return ResponseEntity.ok(taskService.updateTaskForManager(id, taskDTO));
+        return ResponseEntity.ok(taskService.updateTaskForAdmin(id, taskDTO));
     }
 
 }
