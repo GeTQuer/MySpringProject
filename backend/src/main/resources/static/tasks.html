@@ -48,7 +48,7 @@
             <input type="text" id="searchInput" class="form-control" placeholder="Введите текст...">
         </div>
         <div class="col-md-3">
-            <label class="form-label small text-muted">Фильтр по статусу (текущая страница)</label>
+            <label class="form-label small text-muted">Фильтр по статусу (БД)</label>
             <select id="statusFilter" class="form-select">
                 <option value="ALL">Все статусы</option>
                 <option value="OPEN">OPEN</option>
@@ -195,12 +195,10 @@
     document.addEventListener('DOMContentLoaded', () => {
         if (isAdmin) {
             document.getElementById('addTaskBtn').style.display = 'none';
-            document.getElementById('adminDeleteBlock').style.display = 'none';
             document.getElementById('navLinks').innerHTML += `<a class="nav-link admin-nav-btn" href="/admin">⚙️ Админ панель</a>`;
             loadUsers();
             document.getElementById('assigneeContainer').style.display = 'block';
         } else if (isManager) {
-            document.getElementById('adminDeleteBlock').style.display = 'none';
             document.getElementById('navLinks').innerHTML += `<a class="nav-link" href="#" onclick="loadMyTasks(0)">Мои задачи</a>`;
             // Менеджеры могут назначать задачи только себе (без выбора пользователей)
             document.getElementById('assigneeContainer').style.display = 'none';
@@ -250,9 +248,10 @@
         container.appendChild(nextBtn);
     }
 
-    // --- GET: Загрузка всех задач (для админов) или задач отдела (для менеджеров) или своих ---
+    // --- GET: Загрузка задач (с фильтрацией по статусу) ---
     async function loadTasks(page = 0) {
         currentPage = page;
+        const status = document.getElementById('statusFilter').value;
 
         let endpoint;
         if (isAdmin) {
@@ -266,7 +265,8 @@
             endpoint = '/api/tasks/my';
         }
 
-        const url = `${endpoint}?page=${page}&size=${pageSize}`;
+        let url = `${endpoint}?page=${page}&size=${pageSize}`;
+        if (status !== 'ALL') url += `&status=${status}`;
 
         const response = await fetch(url, {
             headers: { 'Authorization': `Bearer ${token}` }
@@ -274,14 +274,12 @@
 
         if (response.ok) {
             const data = await response.json();
-            // Поддержка и Page<T> (с content) и обычного List<T>
             const tasks = data.content !== undefined ? data.content : data;
 
             const tbody = document.getElementById('tasksBody');
             tbody.innerHTML = '';
             tasks.forEach(task => addRowToTable(task));
 
-            // Если пришли метаданные, рисуем пагинацию
             if (data.totalPages !== undefined) {
                 renderPagination(data.totalPages, data.number, 'pagination-controls', loadTasks);
             } else {
@@ -295,8 +293,11 @@
     async function loadMyTasks(page = 0) {
         currentPage = page;
         currentFetchMode = 'MY';
+        const status = document.getElementById('statusFilter').value;
 
-        const url = `/api/tasks/my?page=${page}&size=${pageSize}`;
+        let url = `/api/tasks/my?page=${page}&size=${pageSize}`;
+        if (status !== 'ALL') url += `&status=${status}`;
+
         const response = await fetch(url, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -323,19 +324,19 @@
         const tbody = document.getElementById('tasksBody');
         const tr = document.createElement('tr');
 
-        let actionButtons = `<button class="btn btn-sm btn-primary me-1" onclick="openEditModal(${task.id}, this)">Редактировать</button>`;
-
-        if (!isAdmin && !isManager) {
-            actionButtons += `<button class="btn btn-sm btn-danger" onclick="deleteTask(${task.id}, this)">Удалить</button>`;
-        }
+        // Кнопки действий теперь видны всем, контроллер сам решает права доступа
+        let actionButtons = `
+            <button class="btn btn-sm btn-primary me-1" onclick="openEditModal(${task.id}, this)">Редактировать</button>
+            <button class="btn btn-sm btn-danger" onclick="deleteTask(${task.id}, this)">Удалить</button>
+        `;
 
         tr.innerHTML = `
-                <td class="task-id">${task.id}</td>
-                <td class="task-content">${task.content}</td>
-                <td class="task-employee">${task.fullNameEmployee}</td>
-                <td class="task-status"><span class="badge bg-primary">${task.status}</span></td>
-                <td>${actionButtons}</td>
-            `;
+            <td class="task-id">${task.id}</td>
+            <td class="task-content">${task.content}</td>
+            <td class="task-employee">${task.fullNameEmployee}</td>
+            <td class="task-status"><span class="badge bg-primary">${task.status}</span></td>
+            <td>${actionButtons}</td>
+        `;
         tbody.appendChild(tr);
     }
 
@@ -375,42 +376,16 @@
     });
 
     async function deleteTask(taskId, btnElement) {
-        if (isAdmin) {
-            if (!confirm("Точно удалить?")) return;
-
-            const response = await fetch(`/api/tasks/admin/${taskId}`, {
-                method: 'DELETE',
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-
-            if (response.ok) {
-                refreshCurrentView();
-            } else {
-                alert("Ошибка при удалении задачи");
-            }
-            return;
-        }
-
-        if (isManager) {
-            if (!confirm("Точно удалить?")) return;
-
-            const response = await fetch(`/api/tasks/manager/${taskId}`, {
-                method: 'DELETE',
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-
-            if (response.ok) {
-                refreshCurrentView();
-            } else {
-                alert("Ошибка при удалении задачи");
-            }
-            return;
-        }
-
-        // Обычный пользователь
         if (!confirm("Точно удалить?")) return;
 
-        const response = await fetch(`/api/tasks/${taskId}`, {
+        let endpoint = `/api/tasks/${taskId}`;
+        if (isAdmin) {
+            endpoint = `/api/tasks/admin/${taskId}`;
+        } else if (isManager) {
+            endpoint = `/api/tasks/manager/${taskId}`;
+        }
+
+        const response = await fetch(endpoint, {
             method: 'DELETE',
             headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -418,7 +393,7 @@
         if (response.ok) {
             refreshCurrentView();
         } else {
-            alert("Ошибка при удалении задачи");
+            alert("Ошибка при удалении задачи! Возможно у вас нет прав.");
         }
     }
 
@@ -488,30 +463,26 @@
         }
     });
 
-    function filterTable() {
+    // Фильтрация поиска по тексту (остается на клиенте для текущей страницы)
+    function filterTableText() {
         const searchText = document.getElementById('searchInput').value.toLowerCase();
-        const statusFilter = document.getElementById('statusFilter').value;
         const rows = document.querySelectorAll('#tasksBody tr');
 
         rows.forEach(row => {
             const content = row.querySelector('.task-content').textContent.toLowerCase();
-            const status = row.querySelector('.task-status').textContent;
-
             const matchesText = content.includes(searchText);
-            const matchesStatus = (statusFilter === 'ALL') || (status === statusFilter);
-
-            row.style.display = (matchesText && matchesStatus) ? '' : 'none';
+            // Восстанавливаем отображение на основе текстового поиска
+            row.style.display = matchesText ? '' : 'none';
         });
     }
 
-    document.getElementById('searchInput').addEventListener('input', filterTable);
-    document.getElementById('statusFilter').addEventListener('change', filterTable);
+    document.getElementById('searchInput').addEventListener('input', filterTableText);
 
+    // Фильтрация по статусу теперь перезапрашивает данные с сервера
+    document.getElementById('statusFilter').addEventListener('change', refreshCurrentView);
+
+    // Быстрое удаление
     document.getElementById('deleteByIdBtn').addEventListener('click', async () => {
-        if (isAdmin || isManager) {
-            alert("У вас нет прав на удаление задач.");
-            return;
-        }
         const idInput = document.getElementById('deleteIdInput');
         const taskId = idInput.value.trim();
 
@@ -522,7 +493,14 @@
 
         if (!confirm(`Вы уверены, что хотите удалить задачу с ID ${taskId}?`)) return;
 
-        const response = await fetch(`/api/tasks/${taskId}`, {
+        let endpoint = `/api/tasks/${taskId}`;
+        if (isAdmin) {
+            endpoint = `/api/tasks/admin/${taskId}`;
+        } else if (isManager) {
+            endpoint = `/api/tasks/manager/${taskId}`;
+        }
+
+        const response = await fetch(endpoint, {
             method: 'DELETE',
             headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -532,16 +510,12 @@
             refreshCurrentView();
             alert(`Задача ${taskId} успешно удалена.`);
         } else {
-            alert("Ошибка! Возможно, задачи с таким ID не существует.");
+            alert("Ошибка! Возможно, задачи с таким ID не существует или нет прав.");
         }
     });
 
     async function loadUsers() {
-        // Только админы могут загружать всех пользователей
-        if (!isAdmin) {
-            console.log('Only admins can load all users');
-            return;
-        }
+        if (!isAdmin) return;
 
         try {
             const response = await fetch('/api/tasks/users', {

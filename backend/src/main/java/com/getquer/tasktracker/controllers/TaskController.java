@@ -76,7 +76,7 @@ public class TaskController {
         List<UserDTO> users = userService.getAllUsers();
         return ResponseEntity.ok(users);
     }
-
+    @PreAuthorize("hasRole('MANAGER')")
     @GetMapping("/department")
     public ResponseEntity<Page<TaskDTO>> getDepartmentTasks(
             @RequestParam(value = "status", required = false) TaskStatus status,
