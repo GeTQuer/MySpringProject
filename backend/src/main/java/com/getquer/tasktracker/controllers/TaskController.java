@@ -86,11 +86,11 @@ public class TaskController {
     ){
         String username = authentication.getName();
 
-        if (status != null){
-            return ResponseEntity.ok(taskService.getAllDepartmentTasksByStatus(username, status, page, size));
+            if (status != null){
+                return ResponseEntity.ok(taskService.getAllDepartmentTasksByStatus(username, status, page, size));
+            }
+            return ResponseEntity.ok(taskService.getAllDepartmentTasks(username, page, size));
         }
-        return ResponseEntity.ok(taskService.getAllDepartmentTasks(username, page, size));
-    }
 
 
     @DeleteMapping("/{id}")
