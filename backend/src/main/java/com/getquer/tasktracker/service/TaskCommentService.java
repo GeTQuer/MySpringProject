@@ -7,57 +7,81 @@ import com.getquer.tasktracker.Repositories.TaskCommentsRepository;
 import com.getquer.tasktracker.Repositories.TaskRepository;
 import com.getquer.tasktracker.Repositories.UserRepository;
 import com.getquer.tasktracker.responseDTO.CommentDTO;
+import com.getquer.tasktracker.security.TaskAccessPolicy;
 import jakarta.persistence.EntityNotFoundException;
-import jakarta.transaction.Transactional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class TaskCommentService {
     private final TaskCommentsRepository taskCommentsRepository;
     private final TaskRepository taskRepository;
     private final UserRepository userRepository;
+    private final TaskAccessPolicy taskAccessPolicy;
 
-    public TaskCommentService(TaskCommentsRepository taskCommentsRepository, TaskRepository taskRepository, UserRepository userRepository) {
+    public TaskCommentService(
+            TaskCommentsRepository taskCommentsRepository,
+            TaskRepository taskRepository,
+            UserRepository userRepository,
+            TaskAccessPolicy taskAccessPolicy
+    ) {
         this.taskCommentsRepository = taskCommentsRepository;
         this.taskRepository = taskRepository;
         this.userRepository = userRepository;
+        this.taskAccessPolicy = taskAccessPolicy;
     }
 
     @Transactional
-    public CommentDTO addComment(Long taskId, Long authorId, String text) {
-        TaskEntity task = taskRepository.findById(taskId)
-                .orElseThrow(() -> new EntityNotFoundException("Task not found"));
-        UserEntity user = userRepository.findById(authorId)
-                .orElseThrow(() -> new EntityNotFoundException("Author not found"));
+    public CommentDTO addComment(Long taskId, String username, String text) {
+        TaskEntity task = findTask(taskId);
+        UserEntity actor = findActor(username);
+
+        taskAccessPolicy.checkCanAccess(task, actor);
 
         TaskCommentEntity comment = new TaskCommentEntity();
         comment.setTaskComment(text);
         comment.setTask(task);
-        comment.setAuthor(user);
+        comment.setAuthor(actor);
 
         return mapToDTO(taskCommentsRepository.save(comment));
     }
 
-    public String findComment(Long commentId, Long authorId) {
-        TaskCommentEntity comment = taskCommentsRepository.findByIdAndAuthor_Id(commentId, authorId)
-                .orElseThrow(() -> new EntityNotFoundException("Comment not found or you are not the author"));
+    @Transactional(readOnly = true)
+    public String findComment(Long commentId, String username) {
+        TaskCommentEntity comment = taskCommentsRepository.findById(commentId)
+                .orElseThrow(() -> new EntityNotFoundException("Comment not found"));
+        UserEntity actor = findActor(username);
+
+        taskAccessPolicy.checkCanAccess(comment.getTask(), actor);
 
         return comment.getTaskComment();
     }
 
-    public Page<CommentDTO> findAllCommentsById(Long taskId, int page, int size) {
-        if (!taskRepository.existsById(taskId)) {
-            throw new EntityNotFoundException("Task not found");
-        }
+    @Transactional(readOnly = true)
+    public Page<CommentDTO> findAllCommentsById(Long taskId, String username, int page, int size) {
+        TaskEntity task = findTask(taskId);
+        UserEntity actor = findActor(username);
+
+        taskAccessPolicy.checkCanAccess(task, actor);
 
         Pageable pageable = PageRequest.of(page, size, Sort.by("id").descending());
         Page<TaskCommentEntity> allComments = taskCommentsRepository.findAllByTask_Id(taskId, pageable);
 
         return allComments.map(this::mapToDTO);
+    }
+
+    private TaskEntity findTask(Long taskId) {
+        return taskRepository.findById(taskId)
+                .orElseThrow(() -> new EntityNotFoundException("Task not found"));
+    }
+
+    private UserEntity findActor(String username) {
+        return userRepository.findByUsername(username)
+                .orElseThrow(() -> new EntityNotFoundException("User not found"));
     }
 
     private CommentDTO mapToDTO(TaskCommentEntity taskCommentEntity) {

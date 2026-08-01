@@ -7,6 +7,7 @@ import com.getquer.tasktracker.Entities.TaskEntity;
 import com.getquer.tasktracker.Entities.UserEntity;
 import com.getquer.tasktracker.Repositories.TaskRepository;
 import com.getquer.tasktracker.Repositories.UserRepository;
+import com.getquer.tasktracker.security.TaskAccessPolicy;
 import com.getquer.tasktracker.service.TaskService;
 import com.getquer.tasktracker.util.TaskTestDataMother;
 import jakarta.persistence.EntityNotFoundException;
@@ -18,8 +19,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.*;
+import org.springframework.security.access.AccessDeniedException;
 
 import java.util.List;
 import java.util.Optional;
@@ -34,6 +37,8 @@ public class TaskServiceTest {
             private TaskService taskService;
     @Mock
             private UserRepository userRepository;
+    @Spy
+            private TaskAccessPolicy taskAccessPolicy = new TaskAccessPolicy();
 
     private final Pageable pageable = PageRequest.of(0, 10,
             Sort.by("id").descending()
@@ -596,14 +601,18 @@ public class TaskServiceTest {
 
         @Test
         void deleteByIdForManager_ShouldThrowException_WhenManagerHasNoDepartment(){
+            DepartmentEntity department = TaskTestDataMother.createTestDepartment(1L, "IT");
             UserEntity manager = TaskTestDataMother.createTestUser(1L, "Manager", "MANAGER");
             manager.setDepartment(null);
+            TaskEntity task = TaskTestDataMother.createTestTask(1L, "Задача", TaskStatus.OPEN, manager);
+            task.setDepartment(department);
 
             Mockito.when(userRepository.findByUsername("Manager")).thenReturn(Optional.of(manager));
+            Mockito.when(taskRepository.findById(1L)).thenReturn(Optional.of(task));
 
-            assertThrows(RuntimeException.class, () -> taskService.deleteByIdForManager(1L, "Manager"));
+            assertThrows(AccessDeniedException.class,
+                    () -> taskService.deleteByIdForManager(1L, "Manager"));
 
-            Mockito.verify(taskRepository, Mockito.never()).findById(Mockito.any());
             Mockito.verify(taskRepository, Mockito.never()).delete(Mockito.any());
         }
     }
@@ -714,12 +723,16 @@ public class TaskServiceTest {
 
         @Test
         void getTaskByIdForManagerWithDepartmentCheck_ShouldThrowException_WhenManagerHasNoDepartment(){
+            DepartmentEntity department = TaskTestDataMother.createTestDepartment(1L, "IT");
             UserEntity manager = TaskTestDataMother.createTestUser(1L, "Manager", "MANAGER");
             manager.setDepartment(null);
+            TaskEntity task = TaskTestDataMother.createTestTask(1L, "Задача", TaskStatus.OPEN, manager);
+            task.setDepartment(department);
 
             Mockito.when(userRepository.findByUsername("Manager")).thenReturn(Optional.of(manager));
+            Mockito.when(taskRepository.findById(1L)).thenReturn(Optional.of(task));
 
-            assertThrows(RuntimeException.class,
+            assertThrows(AccessDeniedException.class,
                     () -> taskService.getTaskByIdForManagerWithDepartmentCheck(1L, "Manager"));
         }
 
@@ -747,13 +760,17 @@ public class TaskServiceTest {
 
         @Test
         void updateTaskForManagerWithDepartmentCheck_ShouldThrowException_WhenManagerHasNoDepartment(){
+            DepartmentEntity department = TaskTestDataMother.createTestDepartment(1L, "IT");
             UserEntity manager = TaskTestDataMother.createTestUser(1L, "Manager", "MANAGER");
             manager.setDepartment(null);
+            TaskEntity task = TaskTestDataMother.createTestTask(1L, "Задача", TaskStatus.OPEN, manager);
+            task.setDepartment(department);
             TaskDTO updateDTO = new TaskDTO(1L, "Обновленная задача", "Manager", "DONE", null);
 
             Mockito.when(userRepository.findByUsername("Manager")).thenReturn(Optional.of(manager));
+            Mockito.when(taskRepository.findById(1L)).thenReturn(Optional.of(task));
 
-            assertThrows(RuntimeException.class,
+            assertThrows(AccessDeniedException.class,
                     () -> taskService.updateTaskForManagerWithDepartmentCheck(1L, updateDTO, "Manager"));
         }
 

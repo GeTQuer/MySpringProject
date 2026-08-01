@@ -3,9 +3,11 @@ package com.getquer.tasktracker.controllers;
 import com.getquer.tasktracker.requestDTO.CreateCommentRequest;
 import com.getquer.tasktracker.responseDTO.CommentDTO;
 import com.getquer.tasktracker.service.TaskCommentService;
+import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -20,11 +22,12 @@ public class TaskCommentController {
     @PostMapping("/tasks/{taskId}/comments")
     public ResponseEntity<CommentDTO> addComment(
             @PathVariable Long taskId,
-            @RequestBody CreateCommentRequest request
+            @Valid @RequestBody CreateCommentRequest request,
+            Authentication authentication
     ) {
         CommentDTO createdComment = taskCommentService.addComment(
                 taskId,
-                request.authorId(),
+                authentication.getName(),
                 request.text()
         );
         return ResponseEntity.status(HttpStatus.CREATED).body(createdComment);
@@ -35,18 +38,24 @@ public class TaskCommentController {
     public ResponseEntity<Page<CommentDTO>> getAllComments(
             @PathVariable Long taskId,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "15") int size
+            @RequestParam(defaultValue = "15") int size,
+            Authentication authentication
     ) {
-        Page<CommentDTO> comments = taskCommentService.findAllCommentsById(taskId, page, size);
+        Page<CommentDTO> comments = taskCommentService.findAllCommentsById(
+                taskId,
+                authentication.getName(),
+                page,
+                size
+        );
         return ResponseEntity.ok(comments);
     }
 
     @GetMapping("/comments/{commentId}")
     public ResponseEntity<String> getComment(
             @PathVariable Long commentId,
-            @RequestParam Long authorId
+            Authentication authentication
     ) {
-        String commentText = taskCommentService.findComment(commentId, authorId);
+        String commentText = taskCommentService.findComment(commentId, authentication.getName());
         return ResponseEntity.ok(commentText);
     }
 }

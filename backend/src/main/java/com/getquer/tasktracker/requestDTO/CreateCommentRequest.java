@@ -1,6 +1,8 @@
 package com.getquer.tasktracker.requestDTO;
 
+import jakarta.validation.constraints.NotBlank;
+
 public record CreateCommentRequest (
-    Long authorId,
-    String text
+        @NotBlank(message = "Комментарий не может быть пустым")
+        String text
 ){}
