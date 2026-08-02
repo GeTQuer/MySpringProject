@@ -43,6 +43,7 @@ public class TaskTestDataMother {
         task.setStatus(status);
         task.setUser(user);
         task.setFullNameEmployee(user.getUsername());
+        task.setVersion(0L);
         return task;
     }
 

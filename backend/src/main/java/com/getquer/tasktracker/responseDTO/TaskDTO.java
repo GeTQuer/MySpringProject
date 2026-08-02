@@ -12,5 +12,7 @@ public record TaskDTO (
         @NotBlank(message = "Статус задачи должен быть указан")
         String status,
         @JsonInclude(JsonInclude.Include.NON_NULL)
-        String assignedUsername
+        String assignedUsername,
+        @JsonInclude(JsonInclude.Include.NON_NULL)
+        Long version
 ){}

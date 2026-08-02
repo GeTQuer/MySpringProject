@@ -4,3 +4,5 @@ INSERT INTO departments (name) VALUES ('FRONTEND DEPARTMENT');
 INSERT INTO departments (name) VALUES ('QA DEPARTMENT');
 INSERT INTO departments (name) VALUES ('DEVOPS DEPARTMENT');
 INSERT INTO departments (name) VALUES ('INFOSEC DEPARTMENT');
+
+UPDATE tasks SET version = 0 WHERE version IS NULL;

@@ -6,7 +6,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
-import org.springframework.web.bind.annotation.RequestParam;
 
 import java.util.Optional;
 
@@ -14,14 +13,14 @@ public interface TaskCommentsRepository extends JpaRepository<TaskCommentEntity,
 
     @Query(
             value = """
-            SELECT c 
-            FROM TaskCommentEntity c 
-            JOIN FETCH c.author 
+            SELECT c
+            FROM comment c
+            JOIN FETCH c.author
             WHERE c.task.id = :taskId
             """,
             countQuery = """
-                 SELECT count(c) 
-                 FROM TaskCommentEntity c 
+                 SELECT count(c)
+                 FROM comment c
                  WHERE c.task.id = :taskId
                  """
     )

@@ -94,26 +94,35 @@ public class TaskController {
 
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteById(@PathVariable("id") Long id, Authentication authentication) {
+    public ResponseEntity<Void> deleteById(
+            @PathVariable("id") Long id,
+            @RequestParam("version") Long version,
+            Authentication authentication) {
         String username = authentication.getName();
-        taskService.deleteByIdAndUsername(id, username);
-        return ResponseEntity.ok().build();
+        taskService.deleteByIdAndUsername(id, version, username);
+        return ResponseEntity.noContent().build();
     }
 
     @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping("/admin/{id}")
-    public ResponseEntity<Void> deleteByIdForAdmin(@PathVariable("id") Long id) {
-        taskService.deleteById(id);
-        return ResponseEntity.ok().build();
+    public ResponseEntity<Void> deleteByIdForAdmin(
+            @PathVariable("id") Long id,
+            @RequestParam("version") Long version
+    ) {
+        taskService.deleteById(id, version);
+        return ResponseEntity.noContent().build();
     }
 
     @PreAuthorize("hasRole('MANAGER')")
     @DeleteMapping("/manager/{id}")
-    public ResponseEntity<Void> deleteByIdForManager(@PathVariable("id") Long id, Authentication authentication) {
-        taskService.deleteByIdForManager(id, authentication.getName());
-        return ResponseEntity.ok().build();
+    public ResponseEntity<Void> deleteByIdForManager(
+            @PathVariable("id") Long id,
+            @RequestParam("version") Long version,
+            Authentication authentication
+    ) {
+        taskService.deleteByIdForManager(id, version, authentication.getName());
+        return ResponseEntity.noContent().build();
     }
-
 
     // USER - свои задачи
     @GetMapping("/{id}")

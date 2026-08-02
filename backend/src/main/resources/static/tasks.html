@@ -129,6 +129,7 @@
             <div class="modal-body">
                 <form id="editTaskForm">
                     <input type="hidden" id="editTaskId">
+                    <input type="hidden" id="editTaskVersion">
                     <div class="mb-3">
                         <label class="form-label">Описание задачи</label>
                         <input type="text" class="form-control" id="editTaskContent" required>
@@ -215,6 +216,29 @@
     function refreshCurrentView() {
         if (currentFetchMode === 'ALL' || currentFetchMode === 'DEPARTMENT') loadTasks(currentPage);
         else loadMyTasks(currentPage);
+    }
+
+    function getTaskEndpoint(taskId) {
+        if (isAdmin) return `/api/tasks/admin/${taskId}`;
+        if (isManager) return `/api/tasks/department/${taskId}`;
+        return `/api/tasks/${taskId}`;
+    }
+
+    function getDeleteEndpoint(taskId, version) {
+        let endpoint = `/api/tasks/${taskId}`;
+        if (isAdmin) endpoint = `/api/tasks/admin/${taskId}`;
+        else if (isManager) endpoint = `/api/tasks/manager/${taskId}`;
+
+        return `${endpoint}?version=${encodeURIComponent(version)}`;
+    }
+
+    async function getErrorMessage(response, fallbackMessage) {
+        try {
+            const body = await response.json();
+            return body.error || fallbackMessage;
+        } catch (error) {
+            return fallbackMessage;
+        }
     }
 
     // --- Универсальная функция отрисовки кнопок страниц ---
@@ -327,7 +351,7 @@
         // Кнопки действий теперь видны всем, контроллер сам решает права доступа
         let actionButtons = `
             <button class="btn btn-sm btn-primary me-1" onclick="openEditModal(${task.id}, this)">Редактировать</button>
-            <button class="btn btn-sm btn-danger" onclick="deleteTask(${task.id}, this)">Удалить</button>
+            <button class="btn btn-sm btn-danger" onclick="deleteTask(${task.id}, ${task.version}, this)">Удалить</button>
         `;
 
         tr.innerHTML = `
@@ -375,15 +399,10 @@
         }
     });
 
-    async function deleteTask(taskId, btnElement) {
+    async function deleteTask(taskId, version, btnElement) {
         if (!confirm("Точно удалить?")) return;
 
-        let endpoint = `/api/tasks/${taskId}`;
-        if (isAdmin) {
-            endpoint = `/api/tasks/admin/${taskId}`;
-        } else if (isManager) {
-            endpoint = `/api/tasks/manager/${taskId}`;
-        }
+        const endpoint = getDeleteEndpoint(taskId, version);
 
         const response = await fetch(endpoint, {
             method: 'DELETE',
@@ -393,21 +412,18 @@
         if (response.ok) {
             refreshCurrentView();
         } else {
-            alert("Ошибка при удалении задачи! Возможно у вас нет прав.");
+            alert(await getErrorMessage(
+                response,
+                "Ошибка при удалении задачи! Возможно у вас нет прав."
+            ));
+            if (response.status === 409) refreshCurrentView();
         }
     }
 
     async function openEditModal(taskId, btnElement) {
         currentRowElement = btnElement.closest('tr');
 
-        let endpoint;
-        if (isAdmin) {
-            endpoint = `/api/tasks/admin/${taskId}`;
-        } else if (isManager) {
-            endpoint = `/api/tasks/department/${taskId}`;
-        } else {
-            endpoint = `/api/tasks/${taskId}`;
-        }
+        const endpoint = getTaskEndpoint(taskId);
 
         const response = await fetch(endpoint, {
             headers: { 'Authorization': `Bearer ${token}` }
@@ -417,6 +433,7 @@
             const task = await response.json();
 
             document.getElementById('editTaskId').value = taskId;
+            document.getElementById('editTaskVersion').value = task.version;
             document.getElementById('editTaskIdLabel').textContent = taskId;
             document.getElementById('editTaskContent').value = task.content;
             document.getElementById('editTaskEmployee').value = task.fullNameEmployee;
@@ -434,17 +451,11 @@
         const payload = {
             content: document.getElementById('editTaskContent').value,
             fullNameEmployee: document.getElementById('editTaskEmployee').value,
-            status: document.getElementById('editTaskStatus').value
+            status: document.getElementById('editTaskStatus').value,
+            version: Number(document.getElementById('editTaskVersion').value)
         };
 
-        let endpoint;
-        if (isAdmin) {
-            endpoint = `/api/tasks/admin/${taskId}`;
-        } else if (isManager) {
-            endpoint = `/api/tasks/department/${taskId}`;
-        } else {
-            endpoint = `/api/tasks/${taskId}`;
-        }
+        const endpoint = getTaskEndpoint(taskId);
 
         const response = await fetch(endpoint, {
             method: 'PUT',
@@ -459,7 +470,11 @@
             bootstrap.Modal.getInstance(document.getElementById('editTaskModal')).hide();
             refreshCurrentView();
         } else {
-            alert("Ошибка при обновлении задачи");
+            alert(await getErrorMessage(response, "Ошибка при обновлении задачи"));
+            if (response.status === 409) {
+                bootstrap.Modal.getInstance(document.getElementById('editTaskModal')).hide();
+                refreshCurrentView();
+            }
         }
     });
 
@@ -493,12 +508,20 @@
 
         if (!confirm(`Вы уверены, что хотите удалить задачу с ID ${taskId}?`)) return;
 
-        let endpoint = `/api/tasks/${taskId}`;
-        if (isAdmin) {
-            endpoint = `/api/tasks/admin/${taskId}`;
-        } else if (isManager) {
-            endpoint = `/api/tasks/manager/${taskId}`;
+        const taskResponse = await fetch(getTaskEndpoint(taskId), {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        if (!taskResponse.ok) {
+            alert(await getErrorMessage(
+                taskResponse,
+                "Ошибка! Возможно, задачи с таким ID не существует или нет прав."
+            ));
+            return;
         }
+
+        const task = await taskResponse.json();
+        const endpoint = getDeleteEndpoint(taskId, task.version);
 
         const response = await fetch(endpoint, {
             method: 'DELETE',
@@ -510,7 +533,11 @@
             refreshCurrentView();
             alert(`Задача ${taskId} успешно удалена.`);
         } else {
-            alert("Ошибка! Возможно, задачи с таким ID не существует или нет прав.");
+            alert(await getErrorMessage(
+                response,
+                "Ошибка! Возможно, задачи с таким ID не существует или нет прав."
+            ));
+            if (response.status === 409) refreshCurrentView();
         }
     });
 

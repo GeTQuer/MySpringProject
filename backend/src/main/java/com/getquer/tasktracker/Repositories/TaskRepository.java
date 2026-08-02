@@ -2,18 +2,16 @@ package com.getquer.tasktracker.Repositories;
 
 import com.getquer.tasktracker.Entities.TaskEntity;
 import com.getquer.tasktracker.TaskStatus;
-import jakarta.transaction.Transactional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
-import org.springframework.scheduling.config.Task;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import org.springframework.data.domain.Pageable;
 import java.time.LocalDateTime;
-import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -62,19 +60,16 @@ public interface TaskRepository extends JpaRepository<TaskEntity, Long>
             @Param("username") String username,
             @Param("departmentId") Long departmentId
     );
-    @Modifying
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Transactional
-    @Query("Update TaskEntity t SET t.status = 'OVERDUE'" +
-            "WHERE t.status NOT IN ('DONE','CANCELLED','OVERDUE')" +
-            "AND t.deadline < :now")
-    void markOverdueTasks(@Param("now")LocalDateTime now);
-
-    @Modifying
-    @Transactional
-    @Query("DELETE FROM TaskEntity t WHERE t.status = 'OVERDUE'" +
-            "AND t.deadline < :threseholDate")
-    void deleteOldOverdueTasks(@Param("threseholDate") LocalDateTime threseholDate);
-
+    @Query("""
+            UPDATE TaskEntity t
+            SET t.status = 'OVERDUE',
+                t.version = t.version + 1
+            WHERE t.status NOT IN ('DONE', 'CANCELLED', 'OVERDUE')
+              AND t.deadline < :now
+            """)
+    void markOverdueTasks(@Param("now") LocalDateTime now);
 
 
     @Query(

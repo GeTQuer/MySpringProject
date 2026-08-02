@@ -53,6 +53,28 @@ public class TaskEntity {
     @JoinColumn(name = "department_id",nullable = true)
     private  DepartmentEntity department;
 
+    @Column(name = "completed_At")
+    private LocalDateTime completedAt;
+
+    @Version
+    private Long version;
+
+    public Long getVersion() {
+        return version;
+    }
+
+    public void setVersion(Long version) {
+        this.version = version;
+    }
+
+    public LocalDateTime getCompletedAt() {
+        return completedAt;
+    }
+
+    public void setCompletedAt(LocalDateTime completedAt) {
+        this.completedAt = completedAt;
+    }
+
     public DepartmentEntity getDepartment() {
         return department;
     }

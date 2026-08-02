@@ -1,9 +1,9 @@
 package com.getquer.tasktracker;
 
 import com.getquer.tasktracker.Repositories.TaskRepository;
-import lombok.RequiredArgsConstructor;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 
@@ -16,11 +16,8 @@ public class TaskSheduler {
     }
 
     @Scheduled(cron = "0 0 0 * * *")
+    @Transactional
     public void processOverdue(){
-        LocalDateTime now = LocalDateTime.now();
-        taskRepository.markOverdueTasks(now);
-
-        LocalDateTime sevenDaysAgo = now.minusDays(7);
-        taskRepository.deleteOldOverdueTasks(sevenDaysAgo);
+        taskRepository.markOverdueTasks(LocalDateTime.now());
     }
 }

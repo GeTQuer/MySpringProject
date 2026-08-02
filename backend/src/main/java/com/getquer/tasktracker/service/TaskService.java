@@ -9,12 +9,16 @@ import com.getquer.tasktracker.TaskStatus;
 import com.getquer.tasktracker.security.TaskAccessPolicy;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.data.domain.*;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
 
 @Service
+@Transactional(readOnly = true)
 public class TaskService {
     private final TaskRepository taskRepository;
     private final UserRepository userRepository;
@@ -45,7 +49,7 @@ public class TaskService {
     @Transactional
     public TaskDTO createTask(TaskDTO taskDTO, String currentUsername) {
         UserEntity creator = userRepository.findByUsername(currentUsername)
-                .orElseThrow(() -> new RuntimeException("Создатель не найден: " + currentUsername));
+                .orElseThrow(() -> new EntityNotFoundException("Создатель не найден: " + currentUsername));
 
         String assignedUsername = taskDTO.assignedUsername();
         UserEntity targetUser = creator;
@@ -54,12 +58,12 @@ public class TaskService {
                 && (creator.getRole().equals("MANAGER") || creator.getRole().equals("ADMIN"))) {
 
             targetUser = userRepository.findByUsername(assignedUsername)
-                    .orElseThrow(() -> new RuntimeException("Целевой пользователь не найден: " + assignedUsername));
+                    .orElseThrow(() -> new EntityNotFoundException("Целевой пользователь не найден: " + assignedUsername));
 
             if (creator.getRole().equals("MANAGER")) {
                 if (targetUser.getDepartment() == null ||
                         !creator.getDepartment().getId().equals(targetUser.getDepartment().getId())) {
-                    throw new RuntimeException("Ошибка доступа: вы не можете назначать задачи сотрудникам из другого отдела");
+                    throw new EntityNotFoundException("Ошибка доступа: вы не можете назначать задачи сотрудникам из другого отдела");
                 }
             }
         }
@@ -67,7 +71,7 @@ public class TaskService {
         TaskEntity task = new TaskEntity();
         task.setContent(taskDTO.content());
         task.setFullNameEmployee(taskDTO.fullNameEmployee());
-        task.setStatus(TaskStatus.valueOf(taskDTO.status()));
+        updateStatus(task, taskDTO.status());
 
         task.setUser(targetUser);
 
@@ -127,7 +131,7 @@ public class TaskService {
     }
 
     @Transactional
-    public void deleteByIdAndUsername(Long id,String username)
+    public void deleteByIdAndUsername(Long id, Long version, String username)
     {
         UserEntity user = findActor(username);
         Long departmentId = user.getDepartment().getId();
@@ -135,6 +139,7 @@ public class TaskService {
                 ()-> new EntityNotFoundException("Task with id = "+ id + " not found or you don't have permission to modify if")
         );
         taskAccessPolicy.checkCanAccess(task,user);
+        checkVersion(task, version);
 
         taskRepository.delete(task);
     }
@@ -145,12 +150,16 @@ public class TaskService {
         Long departmentId = user.getDepartment().getId();
         TaskEntity task = taskRepository.findByIdAndUsernameAndDepartmentId(id,username,departmentId)
                 .orElseThrow(()-> new EntityNotFoundException("Task with id = "+ id + " not found or you don't have permission to modify if"));
+
+        checkVersion(task, updateData.version());
         task.setContent(updateData.content());
-        task.setStatus(TaskStatus.valueOf(updateData.status()));
+        updateStatus(task, updateData.status());
         task.setFullNameEmployee(updateData.fullNameEmployee());
         taskRepository.save(task);
+        taskRepository.flush();
         return mapToDTO(task);
     }
+
     public TaskDTO getTaskByID(Long id,String username){
         UserEntity user = findActor(username);
         Long departmentId = user.getDepartment().getId();
@@ -166,7 +175,6 @@ public class TaskService {
     }
 
     // Получить задачу по ID с проверкой отдела (для MANAGER)
-    @Transactional(readOnly = true)
     public TaskDTO getTaskByIdForManagerWithDepartmentCheck(Long id, String username) {
         UserEntity actor = findActor(username);
 
@@ -181,10 +189,12 @@ public class TaskService {
     @Transactional
     public TaskDTO updateTaskForAdmin(Long id, TaskDTO updateData) {
         TaskEntity task = findTask(id);
+        checkVersion(task, updateData.version());
         task.setContent(updateData.content());
-        task.setStatus(TaskStatus.valueOf(updateData.status()));
+        updateStatus(task, updateData.status());
         task.setFullNameEmployee(updateData.fullNameEmployee());
         taskRepository.save(task);
+        taskRepository.flush();
         return mapToDTO(task);
     }
 
@@ -193,12 +203,15 @@ public class TaskService {
     public TaskDTO updateTaskForManagerWithDepartmentCheck(Long id, TaskDTO updateData, String username) {
         UserEntity actor = findActor(username);
         TaskEntity task = findTask(id);
+
         taskAccessPolicy.checkCanAccess(task, actor);
+        checkVersion(task, updateData.version());
 
         task.setContent(updateData.content());
-        task.setStatus(TaskStatus.valueOf(updateData.status()));
+        updateStatus(task, updateData.status());
         task.setFullNameEmployee(updateData.fullNameEmployee());
         taskRepository.save(task);
+        taskRepository.flush();
         return mapToDTO(task);
     }
 
@@ -235,19 +248,22 @@ public class TaskService {
     }
 
     @Transactional
-    public void deleteByIdForManager(Long id, String username) {
+    public void deleteByIdForManager(Long id, Long version, String username) {
         UserEntity actor = userRepository.findByUsername(username)
                 .orElseThrow(() -> new EntityNotFoundException("User not found"));
 
         TaskEntity task = findTask(id);
 
         taskAccessPolicy.checkCanAccess(task, actor);
+        checkVersion(task, version);
 
         taskRepository.delete(task);
     }
     @Transactional
-    public void deleteById(Long id) {
+    public void deleteById(Long id, Long version) {
         TaskEntity task = findTask(id);
+        checkVersion(task, version);
+
         taskRepository.delete(task);
     }
 
@@ -257,7 +273,8 @@ public class TaskService {
                 taskEntity.getContent(),
                 taskEntity.getFullNameEmployee(),
                 taskEntity.getStatus().name(),
-                taskEntity.getUser().getUsername()
+                taskEntity.getUser().getUsername(),
+                taskEntity.getVersion()
         );
     }
 
@@ -269,6 +286,33 @@ public class TaskService {
     private UserEntity findActor(String username) {
         return userRepository.findByUsername(username)
                 .orElseThrow(() -> new EntityNotFoundException("User not found"));
+    }
+
+
+    private void checkVersion(
+            TaskEntity task,
+            Long expectedVersion
+    ) {
+        if (expectedVersion == null || !Objects.equals(task.getVersion(), expectedVersion)) {
+            throw new ObjectOptimisticLockingFailureException(
+                    TaskEntity.class,
+                    task.getId()
+            );
+        }
+    }
+
+    private void updateStatus(TaskEntity task, String statusValue){
+        TaskStatus oldStatus = task.getStatus();
+        TaskStatus newStatus = TaskStatus.valueOf(statusValue);
+
+        if (oldStatus != TaskStatus.DONE && newStatus == TaskStatus.DONE){
+            task.setCompletedAt(LocalDateTime.now());
+        }
+        else if (oldStatus == TaskStatus.DONE && newStatus != TaskStatus.DONE) {
+            task.setCompletedAt(null);
+        }
+        task.setStatus(newStatus);
+
     }
 
 }

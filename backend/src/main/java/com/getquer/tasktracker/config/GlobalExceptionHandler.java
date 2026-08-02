@@ -3,6 +3,7 @@ package com.getquer.tasktracker.config;
 import jakarta.persistence.EntityNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
@@ -38,5 +39,14 @@ public class GlobalExceptionHandler {
 
         log.warn("Task not found: {}",ex.getMessage());
         return new ResponseEntity<>(error,HttpStatus.NOT_FOUND);
+    }
+
+    @ExceptionHandler(OptimisticLockingFailureException.class)
+    public ResponseEntity<Object> handleOptimisticLockException(OptimisticLockingFailureException ex){
+        Map<String,String> error = new HashMap<>();
+        error.put("error", "Задача была изменена или удалена другим пользователем. Обновите данные и повторите попытку.");
+
+        log.warn("Optimistic lock conflict: {}",ex.getMessage());
+        return new ResponseEntity<>(error, HttpStatus.CONFLICT);
     }
 }
