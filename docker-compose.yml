@@ -42,6 +42,8 @@ services:
       GEMINI_API_KEY: ${GEMINI_API_KEY}
       DB_PORT: 5432      # Внутри контейнера порт всегда 5432, а не внешний ${DB_PORT}
       REDIS_HOST: redis  # Внутри сети Docker хостом Redis является имя её сервиса
+      ADMIN_USERNAME: ${ADMIN_USERNAME}
+      ADMIN_PASSWORD_HASH: ${ADMIN_PASSWORD_HASH}
     ports:
       - "8080:8080"
     restart: unless-stopped

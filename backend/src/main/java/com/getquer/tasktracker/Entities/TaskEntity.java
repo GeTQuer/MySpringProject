@@ -13,10 +13,10 @@ public class TaskEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
 
-    @Column(name = "ID")
+    @Column(name = "id")
     private Long id;
 
-    @Column(nullable = false,name = "Content")
+    @Column(nullable = false,name = "content")
     private String content;
 
 
@@ -53,7 +53,7 @@ public class TaskEntity {
     @JoinColumn(name = "department_id",nullable = true)
     private  DepartmentEntity department;
 
-    @Column(name = "completed_At")
+    @Column(name = "completed_at")
     private LocalDateTime completedAt;
 
     @Version
