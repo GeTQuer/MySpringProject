@@ -1,5 +1,6 @@
 package com.getquer.tasktracker.service;
 
+import com.getquer.tasktracker.responseDTO.AssigneeDTO;
 import com.getquer.tasktracker.responseDTO.UserDTO;
 import com.getquer.tasktracker.Entities.DepartmentEntity;
 import com.getquer.tasktracker.Entities.UserEntity;
@@ -7,6 +8,7 @@ import com.getquer.tasktracker.Repositories.DepartmentRepository;
 import com.getquer.tasktracker.Repositories.UserRepository;
 import com.getquer.tasktracker.requestDTO.SignupRequest;
 import jakarta.persistence.EntityNotFoundException;
+import org.springframework.data.domain.*;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -14,7 +16,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -38,13 +39,10 @@ public class UserService implements UserDetailsService {
         return mapToDTO(user);
     }
 
-    public List<UserDTO> getAllUsers(){
-        List<UserEntity> users = userRepository.findAll();
-        List<UserDTO> usersDTO = new ArrayList<>();
-        for (int i = 0; i < users.size(); i++){
-            usersDTO.add(mapToDTO(users.get(i)));
-        }
-        return usersDTO;
+    public Page<UserDTO> getAllUsers(int page,int size){
+        Pageable pageable = PageRequest.of(page,size, Sort.by("id").descending());
+        Page<Long> idPages = userRepository.findAllUsersIds(pageable);
+        return convertToUserPage(idPages,pageable);
     }
 
     private UserDTO mapToDTO(UserEntity userEntity){
@@ -56,6 +54,57 @@ public class UserService implements UserDetailsService {
                 userEntity.getSeniority()
 
         );
+    }
+
+    private Page<UserDTO> convertToUserPage(Page<Long> idPage, Pageable pageable){
+        if (idPage.isEmpty())
+            return Page.empty(pageable);
+
+        List<Long> ids = idPage.getContent();
+        List<UserEntity> users = userRepository.findAllUsersWithIds(ids);
+
+        List<UserDTO> dtos = users.stream()
+                .sorted((u1,u2)->u2.getId().compareTo(u1.getId()))
+                .map(this::mapToDTO)
+                .toList();
+
+        return new PageImpl<>(dtos,pageable,idPage.getTotalElements());
+    }
+
+    public Page<UserDTO> findAllUsersByDepartment(String managerUsername, int page, int size){
+        UserEntity manager = userRepository.findByUsername(managerUsername)
+                .orElseThrow(() -> new EntityNotFoundException("User not found"));
+
+        if (manager.getDepartment() == null){
+            throw new RuntimeException("Manager has no department assigned");
+        }
+        Long departmentId = manager.getDepartment().getId();
+        Pageable pageable = PageRequest.of(page,size, Sort.by("id").descending());
+        Page<Long> idPage = userRepository.findAllUsersByDepartmentId(departmentId,pageable);
+        return convertToUserPage(idPage,pageable);
+    }
+
+    public List<AssigneeDTO> getAssignableUsers(String managerUsername) {
+        UserEntity manager = userRepository.findByUsername(managerUsername)
+                .orElseThrow(() ->
+                        new EntityNotFoundException("Manager not found")
+                );
+
+        if (manager.getDepartment() == null) {
+            return List.of();
+        }
+
+        return userRepository
+                .findAllByDepartment_IdAndRoleOrderByUsernameAsc(
+                        manager.getDepartment().getId(),
+                        "USER"
+                )
+                .stream()
+                .map(user -> new AssigneeDTO(
+                        user.getId(),
+                        user.getUsername()
+                ))
+                .toList();
     }
 
     @Transactional
@@ -75,6 +124,12 @@ public class UserService implements UserDetailsService {
 
         userRepository.save(user);
     }
+    public UserDTO getCurrentUser(String username) {
+        UserEntity user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new EntityNotFoundException("User not found: " + username));
+        return mapToDTO(user);
+    }
+
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         return userRepository.findByUsername(username)

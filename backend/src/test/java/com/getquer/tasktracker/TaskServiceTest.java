@@ -7,6 +7,7 @@ import com.getquer.tasktracker.Entities.TaskEntity;
 import com.getquer.tasktracker.Entities.UserEntity;
 import com.getquer.tasktracker.Repositories.TaskRepository;
 import com.getquer.tasktracker.Repositories.UserRepository;
+import com.getquer.tasktracker.requestDTO.TaskCreateRequest;
 import com.getquer.tasktracker.security.TaskAccessPolicy;
 import com.getquer.tasktracker.service.TaskService;
 import com.getquer.tasktracker.util.TaskTestDataMother;
@@ -52,12 +53,12 @@ public class TaskServiceTest {
         @Test
         void createTask_ShouldSaveTask_forSimpleUser(){
             String currentUsername = "test_user";
-            TaskDTO inputDTO = new TaskDTO(1L, "Починить баг", "Иванов И.И", "OPEN", "null", null);
+            TaskCreateRequest inputDTO = new TaskCreateRequest("Починить баг", "OPEN", null);
 
             UserEntity mockCreator = TaskTestDataMother.createTestUser(1L, currentUsername, "USER");
             mockCreator.setDepartment(null);
             TaskEntity mockSaveTask = TaskTestDataMother.createTestTask(1L, inputDTO.content(), TaskStatus.OPEN, mockCreator);
-            mockSaveTask.setFullNameEmployee(inputDTO.fullNameEmployee());
+            mockSaveTask.setFullNameEmployee(mockCreator.getUsername());
             mockSaveTask.setDepartment(null);
 
             Mockito.when(userRepository.findByUsername(currentUsername)).thenReturn(Optional.of(mockCreator));
@@ -74,7 +75,7 @@ public class TaskServiceTest {
         @Test
         void createTask_ShouldSaveTask_forManager(){
             DepartmentEntity department = TaskTestDataMother.createTestDepartment(1L, "IT");
-            TaskDTO inputDTO = new TaskDTO(1L, "Починить баг", "Иванов Иван Иваныч", "OPEN", "Тестер", null);
+            TaskCreateRequest inputDTO = new TaskCreateRequest("Починить баг", "OPEN", "Тестер");
 
             UserEntity mockAssignedUser = TaskTestDataMother.createTestUserWithDepartment(2L, "Тестер", "USER", department);
             UserEntity mockCreator = TaskTestDataMother.createTestUserWithDepartment(1L, "Иванов Иван Иваныч", "MANAGER", department);
@@ -97,11 +98,11 @@ public class TaskServiceTest {
         @Test
         void createTask_ShouldThrowException_WhenCreatorNotFound(){
             String currentUsername = "nonexistent_user";
-            TaskDTO inputDTO = new TaskDTO(1L, "Починить баг", "Иванов И.И", "OPEN", "null", null);
+            TaskCreateRequest inputDTO = new TaskCreateRequest("Починить баг", "OPEN", null);
 
             Mockito.when(userRepository.findByUsername(currentUsername)).thenReturn(Optional.empty());
 
-            assertThrows(RuntimeException.class,
+            assertThrows(EntityNotFoundException.class,
                     () -> taskService.createTask(inputDTO, currentUsername));
 
             Mockito.verify(taskRepository, Mockito.never()).save(Mockito.any(TaskEntity.class));
@@ -109,14 +110,14 @@ public class TaskServiceTest {
 
         @Test
         void createTask_ShouldThrowException_WhenAssignedUserNotFound_forManager(){
-            TaskDTO inputDTO = new TaskDTO(1L, "Починить баг", "Иванов Иван Иваныч", "OPEN", "nonexistent_user", null);
+            TaskCreateRequest inputDTO = new TaskCreateRequest("Починить баг", "OPEN", "nonexistent_user");
 
             UserEntity mockCreator = TaskTestDataMother.createTestUser(1L, "Иванов Иван Иваныч", "MANAGER");
 
             Mockito.when(userRepository.findByUsername("Иванов Иван Иваныч")).thenReturn(Optional.of(mockCreator));
             Mockito.when(userRepository.findByUsername("nonexistent_user")).thenReturn(Optional.empty());
 
-            assertThrows(RuntimeException.class,
+            assertThrows(EntityNotFoundException.class,
                     () -> taskService.createTask(inputDTO, mockCreator.getUsername()));
 
             Mockito.verify(taskRepository, Mockito.never()).save(Mockito.any(TaskEntity.class));
@@ -126,7 +127,7 @@ public class TaskServiceTest {
         void createTask_ShouldThrowException_WhenManagerAssignsTaskToUserFromDifferentDepartment(){
             DepartmentEntity itDepartment = TaskTestDataMother.createTestDepartment(1L, "IT");
             DepartmentEntity qaDepartment = TaskTestDataMother.createTestDepartment(2L, "QA");
-            TaskDTO inputDTO = new TaskDTO(1L, "Починить баг", "Иванов Иван Иваныч", "OPEN", "Тестер", null);
+            TaskCreateRequest inputDTO = new TaskCreateRequest("Починить баг", "OPEN", "Тестер");
 
             UserEntity mockAssignedUser = TaskTestDataMother.createTestUserWithDepartment(2L, "Тестер", "USER", qaDepartment);
             UserEntity mockCreator = TaskTestDataMother.createTestUserWithDepartment(1L, "Иванов Иван Иваныч", "MANAGER", itDepartment);
@@ -134,7 +135,7 @@ public class TaskServiceTest {
             Mockito.when(userRepository.findByUsername("Тестер")).thenReturn(Optional.of(mockAssignedUser));
             Mockito.when(userRepository.findByUsername("Иванов Иван Иваныч")).thenReturn(Optional.of(mockCreator));
 
-            assertThrows(RuntimeException.class,
+            assertThrows(AccessDeniedException.class,
                     () -> taskService.createTask(inputDTO, mockCreator.getUsername()));
 
             Mockito.verify(taskRepository, Mockito.never()).save(Mockito.any(TaskEntity.class));
@@ -144,7 +145,7 @@ public class TaskServiceTest {
         void createTask_ShouldSaveTask_forAdmin(){
             DepartmentEntity itDepartment = TaskTestDataMother.createTestDepartment(1L, "IT");
             DepartmentEntity qaDepartment = TaskTestDataMother.createTestDepartment(2L, "QA");
-            TaskDTO inputDTO = new TaskDTO(1L, "Починить баг", "Admin", "OPEN", "Тестер", null);
+            TaskCreateRequest inputDTO = new TaskCreateRequest("Починить баг", "OPEN", "Тестер");
 
             UserEntity mockAssignedUser = TaskTestDataMother.createTestUserWithDepartment(2L, "Тестер", "USER", qaDepartment);
             UserEntity mockCreator = TaskTestDataMother.createTestUserWithDepartment(1L, "Admin", "ADMIN", itDepartment);
@@ -162,6 +163,58 @@ public class TaskServiceTest {
             assertNotNull(result);
             assertEquals(inputDTO.assignedUsername(), result.assignedUsername());
             Mockito.verify(taskRepository, Mockito.times(1)).save(Mockito.any(TaskEntity.class));
+        }
+
+        @Test
+        void createTask_ShouldRejectAssigneeForSimpleUser() {
+            TaskCreateRequest inputDTO = new TaskCreateRequest("Починить баг", "OPEN", "other_user");
+            UserEntity creator = TaskTestDataMother.createTestUser(1L, "test_user", "USER");
+
+            Mockito.when(userRepository.findByUsername("test_user")).thenReturn(Optional.of(creator));
+
+            assertThrows(
+                    AccessDeniedException.class,
+                    () -> taskService.createTask(inputDTO, creator.getUsername())
+            );
+
+            Mockito.verify(userRepository, Mockito.never()).findByUsername("other_user");
+            Mockito.verify(taskRepository, Mockito.never()).save(Mockito.any(TaskEntity.class));
+        }
+
+        @Test
+        void createTask_ShouldRejectAssignment_WhenManagerHasNoDepartment() {
+            DepartmentEntity department = TaskTestDataMother.createTestDepartment(1L, "IT");
+            TaskCreateRequest inputDTO = new TaskCreateRequest("Починить баг", "OPEN", "Тестер");
+            UserEntity creator = TaskTestDataMother.createTestUser(1L, "manager", "MANAGER");
+            UserEntity target = TaskTestDataMother.createTestUserWithDepartment(2L, "Тестер", "USER", department);
+
+            Mockito.when(userRepository.findByUsername("manager")).thenReturn(Optional.of(creator));
+            Mockito.when(userRepository.findByUsername("Тестер")).thenReturn(Optional.of(target));
+
+            assertThrows(
+                    AccessDeniedException.class,
+                    () -> taskService.createTask(inputDTO, creator.getUsername())
+            );
+
+            Mockito.verify(taskRepository, Mockito.never()).save(Mockito.any(TaskEntity.class));
+        }
+
+        @Test
+        void createTask_ShouldRejectManagerAsAssigneeForManager() {
+            DepartmentEntity department = TaskTestDataMother.createTestDepartment(1L, "IT");
+            TaskCreateRequest inputDTO = new TaskCreateRequest("Починить баг", "OPEN", "other_manager");
+            UserEntity creator = TaskTestDataMother.createTestUserWithDepartment(1L, "manager", "MANAGER", department);
+            UserEntity target = TaskTestDataMother.createTestUserWithDepartment(2L, "other_manager", "MANAGER", department);
+
+            Mockito.when(userRepository.findByUsername("manager")).thenReturn(Optional.of(creator));
+            Mockito.when(userRepository.findByUsername("other_manager")).thenReturn(Optional.of(target));
+
+            assertThrows(
+                    AccessDeniedException.class,
+                    () -> taskService.createTask(inputDTO, creator.getUsername())
+            );
+
+            Mockito.verify(taskRepository, Mockito.never()).save(Mockito.any(TaskEntity.class));
         }
     }
 

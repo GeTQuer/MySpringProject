@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <title>Список задач</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     <style>
         .admin-nav-btn {
             color: #ffc107 !important;
@@ -18,6 +19,119 @@
             background-color: #ffc107;
             color: #212529 !important;
         }
+
+        /* --- Карточка профиля --- */
+        .profile-dropdown {
+            min-width: 280px;
+            padding: 0;
+            border: none;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+            overflow: hidden;
+        }
+        .profile-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            text-align: center;
+            color: #fff;
+        }
+        .profile-header .avatar {
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 10px;
+            font-size: 24px;
+        }
+        .profile-header .profile-username {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 6px;
+        }
+        .profile-body {
+            padding: 16px 20px;
+            background: #fff;
+        }
+        .profile-body .profile-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 6px 0;
+            font-size: 14px;
+            color: #555;
+        }
+        .profile-body .profile-row .label {
+            font-weight: 500;
+            color: #888;
+        }
+        .profile-body .profile-row .value {
+            font-weight: 600;
+            color: #333;
+        }
+        .profile-footer {
+            padding: 12px 20px;
+            background: #f8f9fa;
+            border-top: 1px solid #eee;
+        }
+
+        /* Badge цвета по ролям */
+        .role-badge-USER { background-color: #0d6efd; }
+        .role-badge-MANAGER { background-color: #fd7e14; }
+        .role-badge-ADMIN { background-color: #dc3545; }
+
+        /* Seniority badge */
+        .seniority-badge {
+            font-size: 11px;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-weight: 600;
+        }
+        .seniority-INTERN { background: #e3f2fd; color: #1565c0; }
+        .seniority-JUNIOR { background: #e8f5e9; color: #2e7d32; }
+        .seniority-MIDDLE { background: #fff3e0; color: #e65100; }
+        .seniority-SENIOR { background: #fce4ec; color: #c62828; }
+        .seniority-TEAM_LEAD { background: #f3e5f5; color: #6a1b9a; }
+
+        /* Аккордеон подчинённых */
+        .subordinates-section {
+            margin-top: 24px;
+        }
+        .subordinates-section .accordion-button:not(.collapsed) {
+            background-color: #fff3e0;
+            color: #e65100;
+        }
+
+        /* Навбар кнопка профиля */
+        .profile-toggle {
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 4px 12px;
+            border-radius: 8px;
+            transition: background 0.2s;
+            color: #fff;
+            text-decoration: none;
+        }
+        .profile-toggle:hover {
+            background: rgba(255,255,255,0.1);
+            color: #fff;
+        }
+        .profile-toggle .avatar-sm {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: 600;
+            color: #fff;
+        }
     </style>
 </head>
 <body class="bg-light">
@@ -30,7 +144,36 @@
                 <a class="nav-link active" href="/tasks">Мои Задачи</a>
             </div>
         </div>
-        <button class="btn btn-outline-light btn-sm" onclick="logout()">Выйти</button>
+
+        <!-- Карточка профиля (dropdown) -->
+        <div class="dropdown">
+            <a class="profile-toggle dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false" id="profileDropdownToggle">
+                <span class="avatar-sm" id="profileAvatarSmall"><i class="bi bi-person-fill"></i></span>
+                <span id="navbarUsername" class="d-none d-md-inline">...</span>
+            </a>
+            <div class="dropdown-menu dropdown-menu-end profile-dropdown" id="profileDropdownMenu">
+                <div class="profile-header">
+                    <div class="avatar" id="profileAvatar"><i class="bi bi-person-fill"></i></div>
+                    <div class="profile-username" id="profileUsername">—</div>
+                    <span class="badge" id="profileRoleBadge">—</span>
+                </div>
+                <div class="profile-body">
+                    <div class="profile-row">
+                        <span class="label"><i class="bi bi-building me-1"></i>Отдел</span>
+                        <span class="value" id="profileDepartment">—</span>
+                    </div>
+                    <div class="profile-row">
+                        <span class="label"><i class="bi bi-bar-chart-steps me-1"></i>Грейд</span>
+                        <span class="value" id="profileSeniority">—</span>
+                    </div>
+                </div>
+                <div class="profile-footer text-center">
+                    <button class="btn btn-outline-danger btn-sm w-100" onclick="logout()">
+                        <i class="bi bi-box-arrow-right me-1"></i>Выйти
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
 </nav>
 
@@ -84,8 +227,38 @@
             <div id="pagination-controls" class="d-flex justify-content-center mt-3 gap-2"></div>
         </div>
     </div>
+
+    <!-- Секция подчинённых для MANAGER (accordion) -->
+    <div class="subordinates-section" id="subordinatesSection" style="display:none;">
+        <div class="accordion" id="subordinatesAccordion">
+            <div class="accordion-item">
+                <h2 class="accordion-header" id="subordinatesHeading">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#subordinatesCollapse" aria-expanded="false" aria-controls="subordinatesCollapse">
+                        <i class="bi bi-people-fill me-2"></i>Мои подчинённые
+                    </button>
+                </h2>
+                <div id="subordinatesCollapse" class="accordion-collapse collapse" aria-labelledby="subordinatesHeading" data-bs-parent="#subordinatesAccordion">
+                    <div class="accordion-body p-0">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                            <tr>
+                                <th>ID</th>
+                                <th>Username</th>
+                                <th>Отдел</th>
+                                <th>Грейд</th>
+                            </tr>
+                            </thead>
+                            <tbody id="subordinatesBody"></tbody>
+                        </table>
+                        <div id="subordinates-pagination" class="d-flex justify-content-center m-3 gap-2"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
+<!-- Модалка: Новая задача -->
 <div class="modal fade" id="addTaskModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -98,10 +271,6 @@
                     <div class="mb-3">
                         <label class="form-label">Описание задачи</label>
                         <input type="text" class="form-control" id="taskContent" required>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Сотрудник</label>
-                        <input type="text" class="form-control" id="taskEmployee" required>
                     </div>
                     <div class="mb-3" id="assigneeContainer" style="display:none;">
                         <label class="form-label">Назначить задачу пользователю</label>
@@ -119,6 +288,7 @@
     </div>
 </div>
 
+<!-- Модалка: Редактирование задачи -->
 <div class="modal fade" id="editTaskModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -170,43 +340,204 @@
     const pageSize = 15;
     let currentFetchMode = 'ALL';
 
-    function parseJwt(token) {
-        try {
-            const base64Url = token.split('.')[1];
-            const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-            const jsonPayload = decodeURIComponent(window.atob(base64).split('').map(function(c) {
-                return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-            }).join(''));
-            return JSON.parse(jsonPayload);
-        } catch (e) {
-            return null;
-        }
-    }
-
-    const decodedToken = parseJwt(token);
     let isAdmin = false;
     let isManager = false;
+    let currentUser = null;
 
-    if (decodedToken) {
-        const role = decodedToken.role;
-        if (role === 'ROLE_ADMIN') isAdmin = true;
-        else if (role === 'ROLE_MANAGER') isManager = true;
+    // ========================================================
+    //  Карточка профиля: актуальные данные из /api/users/me
+    // ========================================================
+    function fillProfileCard(user) {
+        const username = user.username || '—';
+        const role = user.role || 'USER';
+
+        document.getElementById('navbarUsername').textContent = username;
+        document.getElementById('profileAvatarSmall').textContent = username.charAt(0).toUpperCase();
+        document.getElementById('profileAvatar').textContent = username.charAt(0).toUpperCase();
+        document.getElementById('profileUsername').textContent = username;
+
+        const roleLabels = { 'USER': 'Пользователь', 'MANAGER': 'Руководитель', 'ADMIN': 'Администратор' };
+        const roleBadge = document.getElementById('profileRoleBadge');
+        roleBadge.textContent = roleLabels[role] || role;
+        roleBadge.className = `badge role-badge-${role}`;
+
+        document.getElementById('profileDepartment').textContent = user.department || 'Без отдела';
+        renderSeniority(document.getElementById('profileSeniority'), user.seniority);
     }
 
-    document.addEventListener('DOMContentLoaded', () => {
-        if (isAdmin) {
-            document.getElementById('addTaskBtn').style.display = 'none';
-            document.getElementById('navLinks').innerHTML += `<a class="nav-link admin-nav-btn" href="/admin">⚙️ Админ панель</a>`;
-            loadUsers();
-            document.getElementById('assigneeContainer').style.display = 'block';
-        } else if (isManager) {
-            document.getElementById('navLinks').innerHTML += `<a class="nav-link" href="#" onclick="loadMyTasks(0)">Мои задачи</a>`;
-            // Менеджеры могут назначать задачи только себе (без выбора пользователей)
-            document.getElementById('assigneeContainer').style.display = 'none';
+    function renderSeniority(container, seniority) {
+        container.replaceChildren();
+        if (!seniority) {
+            container.textContent = '—';
+            return;
         }
 
-        loadTasks(0);
-    });
+        const badge = document.createElement('span');
+        badge.className = 'seniority-badge';
+        if (['INTERN', 'JUNIOR', 'MIDDLE', 'SENIOR', 'TEAM_LEAD'].includes(seniority)) {
+            badge.classList.add(`seniority-${seniority}`);
+        }
+        badge.textContent = seniority;
+        container.appendChild(badge);
+    }
+
+    async function loadCurrentUser() {
+        const response = await fetch('/api/users/me', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (response.status === 401 || response.status === 403) {
+            logout();
+            return null;
+        }
+        if (!response.ok) {
+            throw new Error('Не удалось загрузить профиль пользователя');
+        }
+        return response.json();
+    }
+
+    function appendNavLink(text, clickHandler, href = '#') {
+        const link = document.createElement('a');
+        link.className = 'nav-link';
+        link.href = href;
+        link.textContent = text;
+        if (clickHandler) {
+            link.addEventListener('click', event => {
+                event.preventDefault();
+                clickHandler();
+            });
+        }
+        document.getElementById('navLinks').appendChild(link);
+    }
+
+    async function initializePage() {
+        try {
+            currentUser = await loadCurrentUser();
+            if (!currentUser) return;
+
+            isAdmin = currentUser.role === 'ADMIN';
+            isManager = currentUser.role === 'MANAGER';
+            fillProfileCard(currentUser);
+
+            const primaryNavLink = document.querySelector('#navLinks .nav-link');
+
+            if (isAdmin) {
+                primaryNavLink.textContent = 'Все задачи';
+                document.getElementById('addTaskBtn').style.display = 'none';
+                const adminLink = document.createElement('a');
+                adminLink.className = 'nav-link admin-nav-btn';
+                adminLink.href = '/admin';
+                adminLink.textContent = '⚙️ Админ панель';
+                document.getElementById('navLinks').appendChild(adminLink);
+            } else if (isManager) {
+                primaryNavLink.textContent = 'Задачи отдела';
+                appendNavLink('Мои задачи', () => loadMyTasks(0));
+                document.getElementById('assigneeContainer').style.display = 'block';
+                await loadAssignableUsers();
+                document.getElementById('subordinatesSection').style.display = 'block';
+                await loadSubordinates(0);
+            }
+
+            await loadTasks(0);
+        } catch (error) {
+            console.error(error);
+            alert(error.message);
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', initializePage);
+
+    // ========================================================
+    //  Загрузка подчинённых для MANAGER
+    // ========================================================
+    let subordinatesCurrentPage = 0;
+    const subordinatesPageSize = 10;
+
+    async function loadSubordinates(page = 0) {
+        subordinatesCurrentPage = page;
+        try {
+            const response = await fetch(`/api/users/department?page=${page}&size=${subordinatesPageSize}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (response.status === 401 || response.status === 403) {
+                logout();
+                return;
+            }
+            if (!response.ok) {
+                console.error('Ошибка загрузки подчинённых:', response.status);
+                return;
+            }
+            const data = await response.json();
+            const users = data.content !== undefined ? data.content : data;
+
+            const tbody = document.getElementById('subordinatesBody');
+            tbody.innerHTML = '';
+
+            users.forEach(user => {
+                const tr = document.createElement('tr');
+
+                const idCell = document.createElement('td');
+                const idValue = document.createElement('strong');
+                idValue.className = 'text-muted';
+                idValue.textContent = user.id;
+                idCell.appendChild(idValue);
+
+                const usernameCell = document.createElement('td');
+                const usernameValue = document.createElement('strong');
+                usernameValue.textContent = user.username;
+                usernameCell.appendChild(usernameValue);
+
+                const departmentCell = document.createElement('td');
+                departmentCell.textContent = user.department || 'Без отдела';
+
+                const seniorityCell = document.createElement('td');
+                renderSeniority(seniorityCell, user.seniority);
+
+                tr.append(idCell, usernameCell, departmentCell, seniorityCell);
+                tbody.appendChild(tr);
+            });
+
+            if (data.totalPages !== undefined) {
+                renderPagination(data.totalPages, data.number, 'subordinates-pagination', loadSubordinates);
+            } else {
+                document.getElementById('subordinates-pagination').innerHTML = '';
+            }
+        } catch (e) {
+            console.error('Ошибка загрузки подчинённых:', e);
+        }
+    }
+
+    // ========================================================
+    //  Загрузка списка assignable пользователей (для MANAGER)
+    // ========================================================
+    async function loadAssignableUsers() {
+        try {
+            const response = await fetch('/api/users/assignable', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (response.status === 401 || response.status === 403) {
+                logout();
+                return;
+            }
+            if (!response.ok) throw new Error('Не удалось загрузить пользователей');
+            const users = await response.json();
+            const select = document.getElementById('taskAssignee');
+            select.replaceChildren();
+
+            const selfOption = document.createElement('option');
+            selfOption.value = '';
+            selfOption.textContent = 'Себе';
+            select.appendChild(selfOption);
+
+            users.forEach(user => {
+                const option = document.createElement('option');
+                option.value = user.username;
+                option.textContent = user.username;
+                select.appendChild(option);
+            });
+        } catch (e) {
+            console.error('Ошибка загрузки assignable пользователей:', e);
+        }
+    }
 
     function logout() {
         sessionStorage.removeItem('jwt_token');
@@ -348,32 +679,53 @@
         const tbody = document.getElementById('tasksBody');
         const tr = document.createElement('tr');
 
-        // Кнопки действий теперь видны всем, контроллер сам решает права доступа
-        let actionButtons = `
-            <button class="btn btn-sm btn-primary me-1" onclick="openEditModal(${task.id}, this)">Редактировать</button>
-            <button class="btn btn-sm btn-danger" onclick="deleteTask(${task.id}, ${task.version}, this)">Удалить</button>
-        `;
+        const idCell = document.createElement('td');
+        idCell.className = 'task-id';
+        idCell.textContent = task.id;
 
-        tr.innerHTML = `
-            <td class="task-id">${task.id}</td>
-            <td class="task-content">${task.content}</td>
-            <td class="task-employee">${task.fullNameEmployee}</td>
-            <td class="task-status"><span class="badge bg-primary">${task.status}</span></td>
-            <td>${actionButtons}</td>
-        `;
+        const contentCell = document.createElement('td');
+        contentCell.className = 'task-content';
+        contentCell.textContent = task.content;
+
+        const employeeCell = document.createElement('td');
+        employeeCell.className = 'task-employee';
+        employeeCell.textContent = task.fullNameEmployee;
+
+        const statusCell = document.createElement('td');
+        statusCell.className = 'task-status';
+        const statusBadge = document.createElement('span');
+        statusBadge.className = 'badge bg-primary';
+        statusBadge.textContent = task.status;
+        statusCell.appendChild(statusBadge);
+
+        const actionsCell = document.createElement('td');
+        const editButton = document.createElement('button');
+        editButton.className = 'btn btn-sm btn-primary me-1';
+        editButton.textContent = 'Редактировать';
+        editButton.addEventListener('click', () => openEditModal(task.id, editButton));
+
+        const deleteButton = document.createElement('button');
+        deleteButton.className = 'btn btn-sm btn-danger';
+        deleteButton.textContent = 'Удалить';
+        deleteButton.addEventListener('click', () => deleteTask(task.id, task.version, deleteButton));
+
+        actionsCell.append(editButton, deleteButton);
+        tr.append(idCell, contentCell, employeeCell, statusCell, actionsCell);
         tbody.appendChild(tr);
     }
 
     document.getElementById('saveTaskBtn').addEventListener('click', async () => {
         if (isAdmin) return;
 
+        const form = document.getElementById('createTaskForm');
+        if (!form.reportValidity()) return;
+
         const payload = {
-            content: document.getElementById('taskContent').value,
-            fullNameEmployee: document.getElementById('taskEmployee').value,
+            content: document.getElementById('taskContent').value.trim(),
             status: "OPEN"
         };
 
-        if (isManager || isAdmin) {
+        if (isManager) {
             const assignee = document.getElementById('taskAssignee').value;
             if (assignee) {
                 payload.assignedUsername = assignee;
@@ -395,7 +747,7 @@
             document.getElementById('taskAssignee').value = '';
             refreshCurrentView();
         } else {
-            alert("Ошибка при сохранении задачи");
+            alert(await getErrorMessage(response, "Ошибка при сохранении задачи"));
         }
     });
 
@@ -540,27 +892,6 @@
             if (response.status === 409) refreshCurrentView();
         }
     });
-
-    async function loadUsers() {
-        if (!isAdmin) return;
-
-        try {
-            const response = await fetch('/api/tasks/users', {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            if (!response.ok) throw new Error('Не удалось загрузить пользователей');
-            const users = await response.json();
-            const select = document.getElementById('taskAssignee');
-            select.innerHTML = '<option value="">Себе</option>';
-            users.forEach(user => {
-                if (user.username !== decodedToken.sub) {
-                    select.innerHTML += `<option value="${user.username}">${user.username}</option>`;
-                }
-            });
-        } catch (e) {
-            console.error(e);
-        }
-    }
 
     document.getElementById('addTaskBtn').addEventListener('click', function (e) {
         e.preventDefault();

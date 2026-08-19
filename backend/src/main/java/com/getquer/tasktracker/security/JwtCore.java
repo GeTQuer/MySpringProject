@@ -22,6 +22,8 @@ public class JwtCore {
 
     /**
      * Генерирует JWT-токен при успешном логине.
+     * Профильные данные загружаются отдельно через /api/users/me,
+     * чтобы отдел и грейд не устаревали до истечения токена.
      */
     public String generateToken(Authentication authentication) {
         UserDetails userDetails = (UserDetails) authentication.getPrincipal();

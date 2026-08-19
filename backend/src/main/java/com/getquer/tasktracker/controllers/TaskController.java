@@ -1,12 +1,9 @@
 package com.getquer.tasktracker.controllers;
 
-import com.getquer.tasktracker.Entities.UserEntity;
+import com.getquer.tasktracker.requestDTO.TaskCreateRequest;
 import com.getquer.tasktracker.responseDTO.TaskDTO;
-import com.getquer.tasktracker.responseDTO.UserDTO;
-import com.getquer.tasktracker.Repositories.UserRepository;
 import com.getquer.tasktracker.TaskStatus;
 import com.getquer.tasktracker.service.TaskService;
-import com.getquer.tasktracker.service.UserService;
 import org.springframework.data.domain.Page;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -16,27 +13,21 @@ import org.springframework.web.bind.annotation.*;
 import jakarta.validation.Valid;
 
 import java.security.Principal;
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/tasks")
 public class TaskController {
     private final TaskService taskService;
-    private final UserRepository userRepository;
-    private final UserService userService;
 
-
-    public TaskController(TaskService taskService, UserRepository userRepository, UserService userService) {
+    public TaskController(TaskService taskService) {
         this.taskService = taskService;
-        this.userRepository = userRepository;
-        this.userService = userService;
     }
 
     @PostMapping
-    public ResponseEntity<TaskDTO> createTask(@Valid @RequestBody TaskDTO taskDTO,
+    public ResponseEntity<TaskDTO> createTask(@Valid @RequestBody TaskCreateRequest request,
                                               Principal principal) {
         String currentUsername = principal.getName();
-        TaskDTO createdTask = taskService.createTask(taskDTO, currentUsername);
+        TaskDTO createdTask = taskService.createTask(request, currentUsername);
 
         return ResponseEntity.ok(createdTask);
     }
@@ -69,12 +60,6 @@ public class TaskController {
         }
         Page<TaskDTO> taskPage = taskService.getAllTaskGlobally(page,size);
         return ResponseEntity.ok(taskPage);
-    }
-    @PreAuthorize("hasRole('ADMIN')")
-    @GetMapping("/users")
-    public ResponseEntity<List<UserDTO>> getUsers() {
-        List<UserDTO> users = userService.getAllUsers();
-        return ResponseEntity.ok(users);
     }
     @PreAuthorize("hasRole('MANAGER')")
     @GetMapping("/department")

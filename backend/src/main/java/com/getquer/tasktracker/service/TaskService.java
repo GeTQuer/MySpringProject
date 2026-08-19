@@ -2,6 +2,7 @@ package com.getquer.tasktracker.service;
 
 import com.getquer.tasktracker.Entities.UserEntity;
 import com.getquer.tasktracker.Repositories.UserRepository;
+import com.getquer.tasktracker.requestDTO.TaskCreateRequest;
 import com.getquer.tasktracker.responseDTO.TaskDTO;
 import com.getquer.tasktracker.Entities.TaskEntity;
 import com.getquer.tasktracker.Repositories.TaskRepository;
@@ -10,6 +11,7 @@ import com.getquer.tasktracker.security.TaskAccessPolicy;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.data.domain.*;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -47,31 +49,45 @@ public class TaskService {
     }
 
     @Transactional
-    public TaskDTO createTask(TaskDTO taskDTO, String currentUsername) {
+    public TaskDTO createTask(TaskCreateRequest request, String currentUsername) {
         UserEntity creator = userRepository.findByUsername(currentUsername)
                 .orElseThrow(() -> new EntityNotFoundException("Создатель не найден: " + currentUsername));
 
-        String assignedUsername = taskDTO.assignedUsername();
+        String assignedUsername = request.assignedUsername();
         UserEntity targetUser = creator;
 
-        if (assignedUsername != null && !assignedUsername.isEmpty()
-                && (creator.getRole().equals("MANAGER") || creator.getRole().equals("ADMIN"))) {
+        if (assignedUsername != null && !assignedUsername.isBlank()) {
+            boolean canAssign = "MANAGER".equals(creator.getRole())
+                    || "ADMIN".equals(creator.getRole());
+
+            if (!canAssign) {
+                throw new AccessDeniedException("Only managers and admins can assign tasks");
+            }
 
             targetUser = userRepository.findByUsername(assignedUsername)
                     .orElseThrow(() -> new EntityNotFoundException("Целевой пользователь не найден: " + assignedUsername));
 
-            if (creator.getRole().equals("MANAGER")) {
-                if (targetUser.getDepartment() == null ||
-                        !creator.getDepartment().getId().equals(targetUser.getDepartment().getId())) {
-                    throw new EntityNotFoundException("Ошибка доступа: вы не можете назначать задачи сотрудникам из другого отдела");
+            if ("MANAGER".equals(creator.getRole())) {
+                boolean sameDepartment = creator.getDepartment() != null
+                        && targetUser.getDepartment() != null
+                        && Objects.equals(
+                        creator.getDepartment().getId(),
+                        targetUser.getDepartment().getId()
+                );
+                boolean targetIsEmployee = "USER".equals(targetUser.getRole());
+
+                if (!sameDepartment || !targetIsEmployee) {
+                    throw new AccessDeniedException(
+                            "Manager can assign tasks only to employees of their department"
+                    );
                 }
             }
         }
 
         TaskEntity task = new TaskEntity();
-        task.setContent(taskDTO.content());
-        task.setFullNameEmployee(taskDTO.fullNameEmployee());
-        updateStatus(task, taskDTO.status());
+        task.setContent(request.content());
+        task.setFullNameEmployee(targetUser.getUsername());
+        updateStatus(task, request.status());
 
         task.setUser(targetUser);
 
@@ -312,7 +328,6 @@ public class TaskService {
             task.setCompletedAt(null);
         }
         task.setStatus(newStatus);
-
     }
 
 }

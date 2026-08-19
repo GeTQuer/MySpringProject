@@ -1,6 +1,8 @@
 # Корпоративный Трекер Задач (Task Tracker)
 
-Надежная система управления задачами с упором на безопасность, строгую изоляцию данных и лучшие практики проектирования REST API. Проект представляет собой монолит на Spring Boot с интегрированным фронтендом на чистом JavaScript (Vanilla JS).
+[![Java CI](https://github.com/GeTQuer/MySpringProject/actions/workflows/ci.yml/badge.svg)](https://github.com/GeTQuer/MySpringProject/actions/workflows/ci.yml)
+
+Система управления задачами для сотрудников, менеджеров и отделов с ролевым доступом, защитой от конкурентных изменений и наблюдаемостью приложения. Проект представляет собой Spring Boot монолит с интегрированным frontend на Vanilla JavaScript.
 
 📸 Интерфейс
 
@@ -18,64 +20,57 @@
 <img width="1938" height="1268" alt="image" src="https://github.com/user-attachments/assets/609b364f-84eb-4821-9a13-d8dd6a110822" />
 
 
-🎯 Что реализовано
+## 🎯 Что реализовано
 
-✅JWT-аутентификация и регистрация пользователей.
+- JWT-аутентификация, регистрация пользователей и BCrypt-хеширование паролей.
+- Роли `USER`, `MANAGER`, `ADMIN` и объектные правила доступа через `TaskAccessPolicy`.
+- CRUD, фильтрация и пагинация задач, комментарии и автоматическая обработка просроченных задач.
+- Защита от lost update через optimistic locking (`@Version`) для обновления и удаления.
+- DTO, Jakarta Validation и централизованная обработка ошибок, включая `409 Conflict`.
+- Решение N+1 при пагинации: страница идентификаторов и отдельная загрузка данных через `JOIN FETCH`.
+- Версионирование схемы PostgreSQL через Flyway и проверка mappings через `ddl-auto=validate`.
+- Redis cache для ответов AI-функции, разбивающей задачу на подзадачи.
+- Swagger/OpenAPI для тестирования и документирования REST API.
+- Actuator, Micrometer, Prometheus и Grafana для мониторинга приложения.
+- GitHub Actions: сборка, тесты и проверка Flyway migrations на PostgreSQL.
 
-✅Stateless Security и BCrypt-хеширование паролей.
+## 🔒 Безопасность и изоляция данных
 
-✅Ролевая модель доступа.
+- Username берётся из `SecurityContext`, а не из данных, которым может управлять клиент.
+- `@PreAuthorize` ограничивает endpoints по ролям, а `TaskAccessPolicy` проверяет доступ к конкретной задаче: пользователь видит свои задачи, менеджер — задачи своего отдела, администратор — все.
+- Repository-запросы дополнительно ограничивают выборку по владельцу и department, защищая API от подмены ID (IDOR).
+- Controllers работают с DTO и не возвращают JPA entities напрямую.
+- Initial admin создаётся Flyway-миграцией из environment placeholders; в Git не сохраняются открытый пароль и его hash.
 
-✅Полный CRUD для задач (создание, чтение, обновление, удаление) с моментальным обновлением UI.
+## 🏗 Архитектура
 
-✅Динамическая клиентская фильтрация по тексту и статусам.
+Приложение построено как слоистый Spring Boot монолит:
 
-✅Swagger/OpenAPI для документирования эндпоинтов.
+```text
+HTTP request
+    ↓
+Spring Security / JWT filter
+    ↓
+Controller → Service → Repository → PostgreSQL
+                 ↓
+          TaskAccessPolicy
+```
 
-✅DTO-маппинг для безопасной передачи данных.
-
-✅Реализовано решение проблемы N+1.
-
-✅ Интеграция Redis (`@Cacheable`) для моментальной отдачи частых запросов и оптимизации нагрузки на БД для AI.
-
-✅ Продвинутая ролевая модель доступа (RBAC)
-
-✅ Оптимистическая блокировка
-
-✅Версионирование схемы Postgresql с помощью FlyWay: перенёс создание таблиц и начальные данные в последовательные SQL-миграции, добавил baseline для существующей базы и проверку схемы через Hibernat
-
-🔒 Безопасность и изоляция данных
-
-- Изоляция контекста: Все операции с задачами выполняются только в рамках пользователя, извлеченного из SecurityContext. Репозиторий использует методы вида findByUserUsername(...), что технически исключает возможность доступа к чужим данным через подмену ID в API (защита от IDOR).
-
-- Предотвращение утечек: Внедрены DTO (Data Transfer Objects). Контроллеры никогда не возвращают внутренние сущности (Entity) напрямую, скрывая системные поля и связи базы данных от внешних клиентов.
-
-- Защита эндпоинтов: Все маршруты API, кроме авторизации, закрыты через Spring Security.
-  
-- Админ автоматически создается как временное решение. # После установки роли Админ другим пользователям рекомендуется удалить из СУБД логин admin!!!
-
-🏗 Архитектура и структура
-
-Проект реализован как Spring Boot монолит с четким разделением ответственности:
-
-- Статический роутинг: Фронтенд-ресурсы (.html, .js) раздаются напрямую из директории /static через настроенный ViewController.
-
-- RESTful API: Обработка бизнес-операций осуществляется через REST-контроллеры по путям /api/tasks и /api/auth. Контракты API развиваются независимо от схемы БД.
-
-- Слой данных: Бизнес-логика инкапсулирована в TaskService, который взаимодействует с базой через интерфейсы JpaRepository.
+Frontend-файлы находятся в `backend/src/main/resources/static`, REST API разделён по controllers, бизнес-сценарии и транзакционные границы находятся в services, а доступ к данным реализован через Spring Data JPA repositories.
 
 ## Структура проекта
 
 ```text
-src/main/java/com/getquer/tasktracker
-├── config             # Конфигурации Security, Redis, Swagger и GlobalExceptionHandler
-├── controller         # REST-контроллеры с разделением по ролям
-├── service            # Бизнес-логика и кэширование
-├── repository         # JpaRepository с пагинацией и кастомными запросами
-├── entity             # Сущности базы данных
+backend/src/main/java/com/getquer/tasktracker
+├── AI                 # Интеграция Spring AI и кеширование ответов
+├── config             # Swagger и GlobalExceptionHandler
+├── controllers        # REST-контроллеры
+├── Entities           # JPA-сущности
+├── Repositories       # JpaRepository и кастомные запросы
 ├── requestDTO         # Валидируемые DTO для входящих данных
 ├── responseDTO        # DTO для безопасной отправки ответов
-└── security           # Фильтры JWT и настройка контекста
+├── security           # JWT, Spring Security и TaskAccessPolicy
+└── service            # Бизнес-логика и транзакционные границы
 ```
 
 ## Схема БД
@@ -85,6 +80,8 @@ erDiagram
     DEPARTMENT ||--o{ USER : contains
     DEPARTMENT ||--o{ TASK : contains
     USER ||--o{ TASK : owns
+    USER ||--o{ COMMENT : writes
+    TASK ||--o{ COMMENT : contains
 
     DEPARTMENT {
         Long id PK
@@ -105,8 +102,21 @@ erDiagram
         String content
         String fullNameEmployee
         String status
+        LocalDateTime created_at
+        LocalDateTime deadline
+        LocalDateTime completed_at
         Long user_id FK
         Long department_id FK
+        Long version
+    }
+
+    COMMENT {
+        Long id PK
+        Long task_id FK
+        Long author_id FK
+        String content
+        LocalDateTime created_at
+        LocalDateTime updated_at
     }
 ```
 
@@ -114,13 +124,18 @@ erDiagram
 
 ### Backend
 
-- Java 17+
+- Java 21
 - Spring Boot (Web, Data JPA, Security, AI)
 - PostgreSQL
 - Hibernate
 - Maven
 - Redis
-- FlyWay
+- Flyway
+- Spring Boot Actuator и Micrometer
+- Prometheus и Grafana
+- JUnit 5 и Mockito
+- Docker и Docker Compose
+- GitHub Actions
 
 ### Frontend
 
@@ -129,53 +144,80 @@ erDiagram
 - Bootstrap 5
 - Vanilla JavaScript (Fetch API)
 
-🚀 Быстрый старт
+## 🚀 Запуск через Docker Compose
 
-Требования:
-
-JDK 17 или выше
-
-Maven
-
-Установленный сервер PostgreSQL
-
-## Установка и запуск для запуска без docker-compose
+Требуется Docker Desktop с поддержкой Docker Compose.
 
 1. Склонируйте репозиторий:
-   ```
-   git clone https://github.com/GeTQuer/MySpringProject.git
-   ```
-   
-2. Настройте подключение к базе данных в файле src/main/resources/application.properties:
-   ```properties
-  spring.datasource.url=jdbc:postgresql://localhost:5432/tasktracker
-  spring.datasource.username=your_user
-  spring.datasource.password=your_password
-  spring.data.redis.host=localhost
-  spring.ai.google.genai.api-key= ВАШ API
-  spring.ai.google.genai.chat.options.model= ВАША МОДЕЛЬ
-  
-   ```
-   
-3. Соберите и запустите приложение:
+
    ```bash
-   mvn clean install
-   mvn spring-boot:run
+   git clone https://github.com/GeTQuer/MySpringProject.git
+   cd MySpringProject
    ```
-   
-4. Откройте интерфейс в браузере
-   ```text
-   http://localhost:8080/login
+
+2. Создайте в корне файл `.env` (он исключён из Git):
+
+   ```dotenv
+   DB_NAME=tasktracker
+   DB_USERNAME=your_user
+   DB_PASSWORD=your_password
+   DB_PORT=5432
+   GEMINI_API_KEY=your_api_key
+   ADMIN_USERNAME=admin
+   ADMIN_PASSWORD_HASH=your_bcrypt_hash
+   GRAFANA_ADMIN_USER=admin
+   GRAFANA_ADMIN_PASSWORD=your_grafana_password
    ```
-## Установка и запуск c docker-compose (ПЕРЕД ЗАПУСКОМ ВВЕДИТЕ КОНФИГУРАЦИОННЫЕ ДАННЫЕ В .env!!!)
-1. Введите команду
+
+3. Соберите и запустите сервисы:
+
+   ```bash
+   docker compose up --build -d
+   docker compose ps
    ```
-   docker-compose up --build
 
-📄 Документация API
+4. Для остановки выполните:
 
-В проект интегрирован Swagger UI для прямого тестирования эндпоинтов в обход визуального интерфейса.
+   ```bash
+   docker compose down
+   ```
 
-После запуска приложения документация доступна по адресу:
+Команда `docker compose down -v` дополнительно удалит данные из named volumes PostgreSQL, Prometheus и Grafana.
 
-http://localhost:8080/swagger-ui/index.html
+## 🔭 Мониторинг
+
+После запуска Compose доступны:
+
+| Компонент | Адрес | Назначение |
+|---|---|---|
+| Actuator Health | http://localhost:8080/actuator/health | Состояние Spring Boot приложения |
+| Prometheus metrics | http://localhost:8080/actuator/prometheus | Метрики в формате Prometheus |
+| Prometheus | http://localhost:9090 | Запросы PromQL и состояние target |
+| Grafana | http://localhost:3000 | Dashboards и визуализация |
+
+Prometheus получает метрики с `app:8080/actuator/prometheus` внутри сети Compose. Для ручного подключения Grafana добавьте data source типа Prometheus с URL `http://prometheus:9090`; логин и пароль Grafana берутся из `.env`.
+
+Проверка target в Prometheus:
+
+```promql
+up{job="task-tracker"}
+```
+
+Значение `1` означает, что Prometheus успешно получает метрики приложения.
+
+## 🧪 Тесты и CI
+
+Локальная проверка backend:
+
+```bash
+cd backend
+./mvnw clean verify
+```
+
+Workflow [Java CI with Maven and PostgreSQL](https://github.com/GeTQuer/MySpringProject/actions/workflows/ci.yml) запускается для pull requests и изменений в `master/main`. GitHub Actions поднимает PostgreSQL, запускает Maven tests и проверяет Flyway migrations; required status check `build-and-test` должен пройти до merge.
+
+## 📄 API и интерфейс
+
+- Интерфейс: http://localhost:8080/login
+- Swagger UI: http://localhost:8080/swagger-ui/index.html
+- OpenAPI JSON: http://localhost:8080/v3/api-docs
