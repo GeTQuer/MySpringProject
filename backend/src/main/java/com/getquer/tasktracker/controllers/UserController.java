@@ -3,7 +3,6 @@ package com.getquer.tasktracker.controllers;
 
 import com.getquer.tasktracker.responseDTO.AssigneeDTO;
 import com.getquer.tasktracker.responseDTO.UserDTO;
-import com.getquer.tasktracker.Repositories.UserRepository;
 import com.getquer.tasktracker.service.UserService;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
@@ -17,13 +16,18 @@ import java.util.List;
 @RequestMapping("/api/users")
 public class UserController {
     private final UserService userService;
-    private final UserRepository userRepository;
 
-    public UserController(UserService userService, UserRepository userRepository) {
+    public UserController(UserService userService) {
         this.userService = userService;
-        this.userRepository = userRepository;
     }
 
+
+    @GetMapping("/me")
+    public ResponseEntity<UserDTO> getCurrentUser(Authentication authentication) {
+        return ResponseEntity.ok(
+                userService.getCurrentUser(authentication.getName())
+        );
+    }
 
     @PreAuthorize("hasRole('MANAGER')")
     @GetMapping("/department")

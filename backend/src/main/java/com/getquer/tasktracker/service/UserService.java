@@ -16,7 +16,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -65,7 +64,7 @@ public class UserService implements UserDetailsService {
         List<UserEntity> users = userRepository.findAllUsersWithIds(ids);
 
         List<UserDTO> dtos = users.stream()
-                .sorted((u1,u2)->u1.getId().compareTo(u2.getId()))
+                .sorted((u1,u2)->u2.getId().compareTo(u1.getId()))
                 .map(this::mapToDTO)
                 .toList();
 
@@ -125,6 +124,12 @@ public class UserService implements UserDetailsService {
 
         userRepository.save(user);
     }
+    public UserDTO getCurrentUser(String username) {
+        UserEntity user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new EntityNotFoundException("User not found: " + username));
+        return mapToDTO(user);
+    }
+
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         return userRepository.findByUsername(username)
