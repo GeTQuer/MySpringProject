@@ -1,6 +1,6 @@
 package com.getquer.tasktracker.requestDTO;
 
-import com.getquer.tasktracker.TaskStatus;
+import com.getquer.tasktracker.Enums.TaskStatus;
 import jakarta.validation.constraints.NotNull;
 
 public record StatusUpdateRequest(

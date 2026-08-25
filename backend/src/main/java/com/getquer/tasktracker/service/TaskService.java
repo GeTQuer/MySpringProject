@@ -6,7 +6,7 @@ import com.getquer.tasktracker.requestDTO.TaskCreateRequest;
 import com.getquer.tasktracker.responseDTO.TaskDTO;
 import com.getquer.tasktracker.Entities.TaskEntity;
 import com.getquer.tasktracker.Repositories.TaskRepository;
-import com.getquer.tasktracker.TaskStatus;
+import com.getquer.tasktracker.Enums.TaskStatus;
 import com.getquer.tasktracker.security.TaskAccessPolicy;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.data.domain.*;
@@ -15,9 +15,11 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
+import java.util.UUID;
 
 @Service
 @Transactional(readOnly = true)
@@ -25,10 +27,12 @@ public class TaskService {
     private final TaskRepository taskRepository;
     private final UserRepository userRepository;
     private final TaskAccessPolicy taskAccessPolicy;
-    public TaskService(TaskRepository taskRepository, UserRepository userRepository, TaskAccessPolicy taskAccessPolicy) {
+    private  final NotificationService notificationService;
+    public TaskService(TaskRepository taskRepository, UserRepository userRepository, TaskAccessPolicy taskAccessPolicy, NotificationService notificationService) {
         this.taskRepository = taskRepository;
         this.userRepository = userRepository;
         this.taskAccessPolicy = taskAccessPolicy;
+        this.notificationService = notificationService;
     }
 
     private Page<TaskDTO> convertToTaskPage(Page<Long> idPage, Pageable pageable) {
@@ -95,6 +99,25 @@ public class TaskService {
         task.setDepartment(targetUser.getDepartment());
 
         TaskEntity savedTask = taskRepository.save(task);
+
+        if (!Objects.equals(creator.getId(), targetUser.getId())
+                && "USER".equals(targetUser.getRole())) {
+
+            NotificationService.TaskAssignedEvent event =
+                    new NotificationService.TaskAssignedEvent(
+                            UUID.randomUUID(),
+                            savedTask.getId(),
+                            creator.getId(),
+                            creator.getUsername(),
+                            targetUser.getId(),
+                            savedTask.getContent(),
+                            Instant.now()
+                    );
+
+            notificationService.createNotification(event);
+        }
+
+
         return mapToDTO(savedTask);
     }
 

@@ -53,6 +53,8 @@ public class SecurityConfig {
                                 "/register.html",
                                 "/tasks",
                                 "/tasks.html",
+                                "/notifications.css",
+                                "/notifications.js",
                                 "/api/auth/**",
                                 "/api/v1/ai/**",
                                 "/v3/api-docs",

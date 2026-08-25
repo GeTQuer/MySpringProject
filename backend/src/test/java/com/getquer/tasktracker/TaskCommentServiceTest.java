@@ -4,6 +4,7 @@ import com.getquer.tasktracker.Entities.DepartmentEntity;
 import com.getquer.tasktracker.Entities.TaskCommentEntity;
 import com.getquer.tasktracker.Entities.TaskEntity;
 import com.getquer.tasktracker.Entities.UserEntity;
+import com.getquer.tasktracker.Enums.TaskStatus;
 import com.getquer.tasktracker.Repositories.TaskCommentsRepository;
 import com.getquer.tasktracker.Repositories.TaskRepository;
 import com.getquer.tasktracker.Repositories.UserRepository;
@@ -39,6 +40,7 @@ class TaskCommentServiceTest {
     private UserRepository userRepository;
     @Spy
     private TaskAccessPolicy taskAccessPolicy = new TaskAccessPolicy();
+
     @InjectMocks
     private TaskCommentService taskCommentService;
 
