@@ -3,12 +3,7 @@ package com.getquer.tasktracker.util;
 import com.getquer.tasktracker.Entities.DepartmentEntity;
 import com.getquer.tasktracker.Entities.TaskEntity;
 import com.getquer.tasktracker.Entities.UserEntity;
-import com.getquer.tasktracker.TaskStatus;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.Pageable;
-
-import java.util.List;
+import com.getquer.tasktracker.Enums.TaskStatus;
 
 public class TaskTestDataMother {
 

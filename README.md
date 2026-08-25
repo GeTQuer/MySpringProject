@@ -19,6 +19,10 @@
 
 <img width="1938" height="1268" alt="image" src="https://github.com/user-attachments/assets/609b364f-84eb-4821-9a13-d8dd6a110822" />
 
+Центр уведомлений
+
+<!-- Добавьте сюда скриншот выпадающего центра уведомлений. -->
+
 
 ## 🎯 Что реализовано
 
@@ -30,6 +34,7 @@
 - Решение N+1 при пагинации: страница идентификаторов и отдельная загрузка данных через `JOIN FETCH`.
 - Версионирование схемы PostgreSQL через Flyway и проверка mappings через `ddl-auto=validate`.
 - Redis cache для ответов AI-функции, разбивающей задачу на подзадачи.
+- Персональные уведомления о назначении задач: счётчик непрочитанных, чтение одного или всех уведомлений, периодическое обновление и переход к связанной задаче.
 - Swagger/OpenAPI для тестирования и документирования REST API.
 - Actuator, Micrometer, Prometheus и Grafana для мониторинга приложения.
 - GitHub Actions: сборка, тесты и проверка Flyway migrations на PostgreSQL.
@@ -58,6 +63,8 @@ Controller → Service → Repository → PostgreSQL
 
 Frontend-файлы находятся в `backend/src/main/resources/static`, REST API разделён по controllers, бизнес-сценарии и транзакционные границы находятся в services, а доступ к данным реализован через Spring Data JPA repositories.
 
+При назначении задачи другому сотруднику `TaskService` создаёт событие назначения, а `NotificationService` сохраняет персональное уведомление в той же транзакции. Frontend периодически запрашивает новые уведомления, показывает toast и позволяет перейти к связанной задаче.
+
 ## Структура проекта
 
 ```text
@@ -66,6 +73,7 @@ backend/src/main/java/com/getquer/tasktracker
 ├── config             # Swagger и GlobalExceptionHandler
 ├── controllers        # REST-контроллеры
 ├── Entities           # JPA-сущности
+├── Enums              # Статусы задач и типы уведомлений
 ├── Repositories       # JpaRepository и кастомные запросы
 ├── requestDTO         # Валидируемые DTO для входящих данных
 ├── responseDTO        # DTO для безопасной отправки ответов
@@ -82,6 +90,9 @@ erDiagram
     USER ||--o{ TASK : owns
     USER ||--o{ COMMENT : writes
     TASK ||--o{ COMMENT : contains
+    USER ||--o{ NOTIFICATION : receives
+    USER o|--o{ NOTIFICATION : triggers
+    TASK o|--o{ NOTIFICATION : references
 
     DEPARTMENT {
         Long id PK
@@ -117,6 +128,19 @@ erDiagram
         String content
         LocalDateTime created_at
         LocalDateTime updated_at
+    }
+
+    NOTIFICATION {
+        Long id PK
+        UUID event_id UK
+        Long recipient_id FK
+        Long actor_id FK
+        Long task_id FK
+        String type
+        String title
+        String message
+        Instant created_at
+        Instant read_at
     }
 ```
 
@@ -221,3 +245,16 @@ Workflow [Java CI with Maven and PostgreSQL](https://github.com/GeTQuer/MySpring
 - Интерфейс: http://localhost:8080/login
 - Swagger UI: http://localhost:8080/swagger-ui/index.html
 - OpenAPI JSON: http://localhost:8080/v3/api-docs
+
+### Уведомления
+
+Все endpoints доступны только аутентифицированному пользователю и работают с его собственными уведомлениями:
+
+| Метод | Endpoint | Назначение |
+|---|---|---|
+| `GET` | `/api/notifications?page=0&size=20` | Получить страницу уведомлений |
+| `GET` | `/api/notifications/unread-count` | Получить количество непрочитанных |
+| `PATCH` | `/api/notifications/{id}/read` | Отметить одно уведомление прочитанным |
+| `PATCH` | `/api/notifications/read-all` | Отметить все уведомления прочитанными |
+
+Центр уведомлений встроен в страницу задач и административную панель. Он обновляется автоматически, показывает toast для новых назначений и подсвечивает связанную задачу после перехода.

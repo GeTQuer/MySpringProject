@@ -1,7 +1,7 @@
 package com.getquer.tasktracker.Repositories;
 
 import com.getquer.tasktracker.Entities.TaskEntity;
-import com.getquer.tasktracker.TaskStatus;
+import com.getquer.tasktracker.Enums.TaskStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -21,7 +21,10 @@ public interface TaskRepository extends JpaRepository<TaskEntity, Long>
 
 
     @Query(
-            value = "SELECT t.id FROM TaskEntity t JOIN t.user u LEFT JOIN t.department d WHERE t.status = :status AND u.username = :username AND (:departmentId IS NULL OR d.id = :departmentId)",
+            value = "SELECT t.id " +
+                    "FROM TaskEntity t " +
+                    "JOIN t.user u " +
+                    "LEFT JOIN t.department d WHERE t.status = :status AND u.username = :username AND (:departmentId IS NULL OR d.id = :departmentId)",
             countQuery = "SELECT COUNT(t) FROM TaskEntity t JOIN t.user u LEFT JOIN t.department d WHERE t.status = :status AND u.username = :username AND (:departmentId IS NULL OR d.id = :departmentId)"
     )
     Page<Long> findAllByUserUsernameAndStatus(@Param("username") String username,
@@ -47,8 +50,6 @@ public interface TaskRepository extends JpaRepository<TaskEntity, Long>
             value = "SELECT t.id FROM TaskEntity t",
             countQuery = "SELECT COUNT(t) FROM TaskEntity t"
     )
-
-
     Page<Long> findAllIds(Pageable pageable);
 
     @Query("SELECT t FROM TaskEntity t JOIN FETCH t.user WHERE t.id IN :ids")
@@ -77,7 +78,6 @@ public interface TaskRepository extends JpaRepository<TaskEntity, Long>
             countQuery = "SELECT COUNT(t) FROM TaskEntity t JOIN t.department d WHERE d.id = :id"
     )
 
-
     Page<Long> findAllTasksByDepartmentId(@Param("id") Long id, Pageable pageable);
 
     @Query(
@@ -85,6 +85,9 @@ public interface TaskRepository extends JpaRepository<TaskEntity, Long>
             countQuery =  "SELECT COUNT(t) FROM TaskEntity t JOIN t.department d WHERE d.id = :id and t.status = :status"
     )
     Page<Long> findAllTasksByDepartmentIdAndStatus(@Param("id") Long id, @Param("status") TaskStatus status, Pageable pageable);
+
+
+
 
 
 

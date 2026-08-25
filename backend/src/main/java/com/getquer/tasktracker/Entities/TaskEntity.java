@@ -1,6 +1,6 @@
 package com.getquer.tasktracker.Entities;
 
-import com.getquer.tasktracker.TaskStatus;
+import com.getquer.tasktracker.Enums.TaskStatus;
 import jakarta.persistence.*;
 
 import java.time.LocalDateTime;

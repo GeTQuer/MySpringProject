@@ -2,7 +2,7 @@ package com.getquer.tasktracker.controllers;
 
 import com.getquer.tasktracker.requestDTO.TaskCreateRequest;
 import com.getquer.tasktracker.responseDTO.TaskDTO;
-import com.getquer.tasktracker.TaskStatus;
+import com.getquer.tasktracker.Enums.TaskStatus;
 import com.getquer.tasktracker.service.TaskService;
 import org.springframework.data.domain.Page;
 import org.springframework.security.access.prepost.PreAuthorize;
