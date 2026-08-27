@@ -3,6 +3,7 @@ package com.getquer.tasktracker.util;
 import com.getquer.tasktracker.Entities.NotificationEntity;
 import com.getquer.tasktracker.Enums.NotificationType;
 import com.getquer.tasktracker.service.NotificationService;
+import com.getquer.tasktracker.events.TaskAssignedEventV1;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -50,12 +51,12 @@ public final class NotificationTestDataMother {
         return notification;
     }
 
-    public static NotificationService.TaskAssignedEvent createTaskAssignedEvent(
+    public static TaskAssignedEventV1 createTaskAssignedEvent(
             Long taskId,
             Long actorId,
             Long recipientId
     ) {
-        return new NotificationService.TaskAssignedEvent(
+        return new TaskAssignedEventV1(
                 new UUID(1L, taskId),
                 taskId,
                 actorId,

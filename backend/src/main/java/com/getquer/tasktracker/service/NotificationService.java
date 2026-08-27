@@ -7,38 +7,29 @@ import com.getquer.tasktracker.Repositories.NotificationRepository;
 import com.getquer.tasktracker.Repositories.UserRepository;
 import com.getquer.tasktracker.responseDTO.NotificationDTO;
 import jakarta.persistence.EntityNotFoundException;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
 import java.time.Instant;
-import java.util.UUID;
+import com.getquer.tasktracker.events.TaskAssignedEventV1;
+
 
 @Service
+@RequiredArgsConstructor
 public class NotificationService {
-    public record TaskAssignedEvent(
-            UUID eventId,
-            Long taskId,
-            Long actorId,
-            String actorUsername,
-            Long recipientId,
-            String taskContent,
-            Instant occurredAt
-    ) {}
+
+
     private final NotificationRepository notificationRepository;
     private final UserRepository userRepository;
 
-    public NotificationService(NotificationRepository notificationRepository, UserRepository userRepository) {
-        this.notificationRepository = notificationRepository;
-        this.userRepository = userRepository;
-    }
 
     @Transactional
     public NotificationDTO createNotification(
-            TaskAssignedEvent event
+            TaskAssignedEventV1 event
     ){
         NotificationEntity notification = new NotificationEntity();
         notification.setEventId(event.eventId());
@@ -50,7 +41,7 @@ public class NotificationService {
         notification.setMessage(
                 event.actorUsername()
                         + " назначил вам задачу: "
-                        + event.taskContent()
+                        + event.taskTitle()
         );
         notification.setCreatedAt(event.occurredAt());
 

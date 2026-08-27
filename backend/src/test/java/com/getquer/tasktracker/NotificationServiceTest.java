@@ -5,9 +5,9 @@ import com.getquer.tasktracker.Entities.UserEntity;
 import com.getquer.tasktracker.Enums.NotificationType;
 import com.getquer.tasktracker.Repositories.NotificationRepository;
 import com.getquer.tasktracker.Repositories.UserRepository;
+import com.getquer.tasktracker.events.TaskAssignedEventV1;
 import com.getquer.tasktracker.responseDTO.NotificationDTO;
 import com.getquer.tasktracker.service.NotificationService;
-import com.getquer.tasktracker.service.NotificationService.TaskAssignedEvent;
 import com.getquer.tasktracker.util.NotificationTestDataMother;
 import com.getquer.tasktracker.util.TaskTestDataMother;
 import jakarta.persistence.EntityNotFoundException;
@@ -56,11 +56,12 @@ class NotificationServiceTest {
 
     @Test
     void createNotification_ShouldSaveAndReturnTaskAssignedNotification() {
-        TaskAssignedEvent event = NotificationTestDataMother.createTaskAssignedEvent(
-                100L,
-                10L,
-                RECIPIENT_ID
-        );
+        TaskAssignedEventV1 event =
+                NotificationTestDataMother.createTaskAssignedEvent(
+                        100L,
+                        10L,
+                        RECIPIENT_ID
+                );
 
         when(notificationRepository.save(any(NotificationEntity.class)))
                 .thenAnswer(invocation -> {
@@ -78,7 +79,7 @@ class NotificationServiceTest {
         assertFalse(result.read());
         assertNull(result.readAt());
         assertTrue(result.message().contains(event.actorUsername()));
-        assertTrue(result.message().contains(event.taskContent()));
+        assertTrue(result.message().contains(event.taskTitle()));
 
         ArgumentCaptor<NotificationEntity> captor =
                 ArgumentCaptor.forClass(NotificationEntity.class);
