@@ -1,7 +1,9 @@
 (() => {
     'use strict';
 
-    const API_BASE = '/api/notifications';
+    const notificationServiceOrigin = window.NOTIFICATION_SERVICE_ORIGIN
+        || `${window.location.protocol}//${window.location.hostname}:8081`;
+    const API_BASE = `${notificationServiceOrigin.replace(/\/$/, '')}/api/notifications`;
     const POLL_INTERVAL_MS = 15_000;
     const PAGE_SIZE = 8;
 

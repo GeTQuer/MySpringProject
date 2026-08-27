@@ -48,3 +48,7 @@ jobs:
           SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/tasktracker
           SPRING_DATASOURCE_USERNAME: root
           SPRING_DATASOURCE_PASSWORD: root
+
+      - name: Build and Test Notification Service
+        working-directory: ./notification-service
+        run: mvn --batch-mode --no-transfer-progress clean verify

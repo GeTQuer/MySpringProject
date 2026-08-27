@@ -1,6 +1,4 @@
-package com.getquer.tasktracker.responseDTO;
-
-import com.getquer.tasktracker.Enums.NotificationType;
+package com.getquer.notification;
 
 import java.time.Instant;
 

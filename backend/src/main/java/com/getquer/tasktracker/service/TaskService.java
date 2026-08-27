@@ -9,6 +9,7 @@ import com.getquer.tasktracker.Repositories.TaskRepository;
 import com.getquer.tasktracker.Enums.TaskStatus;
 import com.getquer.tasktracker.security.TaskAccessPolicy;
 import jakarta.persistence.EntityNotFoundException;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.*;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.security.access.AccessDeniedException;
@@ -20,20 +21,17 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
-
+import com.getquer.tasktracker.events.TaskAssignedEventV1;
 @Service
+@RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class TaskService {
     private final TaskRepository taskRepository;
     private final UserRepository userRepository;
     private final TaskAccessPolicy taskAccessPolicy;
-    private  final NotificationService notificationService;
-    public TaskService(TaskRepository taskRepository, UserRepository userRepository, TaskAccessPolicy taskAccessPolicy, NotificationService notificationService) {
-        this.taskRepository = taskRepository;
-        this.userRepository = userRepository;
-        this.taskAccessPolicy = taskAccessPolicy;
-        this.notificationService = notificationService;
-    }
+    private final OutboxService outboxService;
+
+
 
     private Page<TaskDTO> convertToTaskPage(Page<Long> idPage, Pageable pageable) {
         // Если база ничего не нашла по фильтрам, сразу отдаем пустую страницу
@@ -103,18 +101,16 @@ public class TaskService {
         if (!Objects.equals(creator.getId(), targetUser.getId())
                 && "USER".equals(targetUser.getRole())) {
 
-            NotificationService.TaskAssignedEvent event =
-                    new NotificationService.TaskAssignedEvent(
-                            UUID.randomUUID(),
-                            savedTask.getId(),
-                            creator.getId(),
-                            creator.getUsername(),
-                            targetUser.getId(),
-                            savedTask.getContent(),
-                            Instant.now()
-                    );
-
-            notificationService.createNotification(event);
+            TaskAssignedEventV1 event = new TaskAssignedEventV1(
+                    UUID.randomUUID(),
+                    savedTask.getId(),
+                    creator.getId(),
+                    creator.getUsername(),
+                    targetUser.getId(),
+                    savedTask.getContent(),
+                    Instant.now()
+            );
+            outboxService.saveTaskAssignedEvent(event);
         }
 
 
