@@ -1,10 +1,11 @@
 package com.getquer.tasktracker.security;
 
+import com.getquer.tasktracker.Entities.UserEntity;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
@@ -26,20 +27,29 @@ public class JwtCore {
      * чтобы отдел и грейд не устаревали до истечения токена.
      */
     public String generateToken(Authentication authentication) {
-        UserDetails userDetails = (UserDetails) authentication.getPrincipal();
-        SecretKey key = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
+        if (!(authentication.getPrincipal() instanceof UserEntity user)) {
+            throw new IllegalStateException(
+                    "Authentication principal is not UserEntity"
+            );
+        }
 
-        // Получаем первую роль (предполагается одна)
-        String role = userDetails.getAuthorities().stream()
+        SecretKey key = Keys.hmacShaKeyFor(
+                secret.getBytes(StandardCharsets.UTF_8)
+        );
+
+        String role = user.getAuthorities().stream()
                 .findFirst()
-                .map(grantedAuthority -> grantedAuthority.getAuthority())
+                .map(GrantedAuthority::getAuthority)
                 .orElse("ROLE_USER");
 
         return Jwts.builder()
-                .subject(userDetails.getUsername())
+                .subject(user.getUsername())
+                .claim("userId", user.getId())
                 .claim("role", role)
                 .issuedAt(new Date())
-                .expiration(new Date(new Date().getTime() + lifetime))
+                .expiration(new Date(
+                        System.currentTimeMillis() + lifetime
+                ))
                 .signWith(key)
                 .compact();
     }

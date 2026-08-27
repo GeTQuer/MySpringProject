@@ -1,6 +1,6 @@
 package com.getquer.tasktracker.security;
 
-import com.getquer.tasktracker.Repositories.UserRepository;
+import com.getquer.tasktracker.service.UserService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -11,11 +11,6 @@ import org.springframework.security.config.annotation.method.configuration.Enabl
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.core.userdetails.User;
-import org.springframework.security.core.userdetails.UserDetailsService;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
@@ -25,20 +20,22 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @EnableMethodSecurity
 public class SecurityConfig {
     private final JwtFilter jwtFilter;
-    private final UserRepository userRepository;
 
-    public SecurityConfig(JwtFilter jwtFilter, UserRepository userRepository){
+    public SecurityConfig(JwtFilter jwtFilter){
         this.jwtFilter = jwtFilter;
-        this.userRepository = userRepository;
     }
 
 
     @Bean
-    public AuthenticationProvider authenticationProvider(PasswordEncoder passwordEncoder) { // Spring сам подставит сюда бин из CryptoConfig
-        DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
-        authProvider.setUserDetailsService(userDetailsService());
-        authProvider.setPasswordEncoder(passwordEncoder); // передаем параметр
-        return authProvider;
+    public AuthenticationProvider authenticationProvider(
+            PasswordEncoder passwordEncoder,
+            UserService userService
+    ) {
+        DaoAuthenticationProvider provider =
+                new DaoAuthenticationProvider(userService);
+
+        provider.setPasswordEncoder(passwordEncoder);
+        return provider;
     }
 
     @Bean
@@ -73,23 +70,8 @@ public class SecurityConfig {
 
         return http.build();
     }
-
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration authenticationConfiguration) throws Exception {
         return authenticationConfiguration.getAuthenticationManager();
-    }
-    @Bean
-    public UserDetailsService userDetailsService() {
-        return username -> userRepository.findByUsername(username)
-                .map(user -> new User(
-                        user.getUsername(),
-                        user.getPassword(),
-                        java.util.Collections.singletonList(
-                                new SimpleGrantedAuthority("ROLE_" + user.getRole())
-                        )
-                ))
-                .orElseThrow(() -> new UsernameNotFoundException(
-                        "Пользователь " + username + " не найден"
-                ));
     }
 }
