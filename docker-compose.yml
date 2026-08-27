@@ -25,6 +25,11 @@ services:
     container_name: myspringproject-redis
     ports:
       - "6379:6379"
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 5s
+      timeout: 3s
+      retries: 5
     restart: unless-stopped
 
   prometheus:
@@ -37,6 +42,7 @@ services:
       - "9090:9090"
     depends_on:
       - app
+      - notification-service
     restart: unless-stopped
 
   grafana:
@@ -91,6 +97,45 @@ services:
       start_period: 20s
     restart: unless-stopped
 
+
+  notification-database:
+    image: postgres:15
+    container_name: notification-db
+    environment:
+      POSTGRES_DB: ${NOTIFICATION_DB_NAME:-notifications}
+      POSTGRES_USER: ${NOTIFICATION_DB_USERNAME:-notifications}
+      POSTGRES_PASSWORD: ${NOTIFICATION_DB_PASSWORD:-notifications}
+    ports:
+      - "5433:5432"
+    volumes:
+      - notification_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB" ]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+  notification-service:
+    build:
+      context: ./notification-service
+    container_name: notification-service
+    depends_on:
+      notification-database:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    environment:
+      NOTIFICATION_DB_URL: jdbc:postgresql://notification-database:5432/${NOTIFICATION_DB_NAME:-notifications}
+      NOTIFICATION_DB_USERNAME: ${NOTIFICATION_DB_USERNAME:-notifications}
+      NOTIFICATION_DB_PASSWORD: ${NOTIFICATION_DB_PASSWORD:-notifications}
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      JWT_SECRET: ${JWT_SECRET}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:8080,http://127.0.0.1:8080}
+    ports:
+      - "8081:8081"
+    restart: unless-stopped
+
   app:
     build: .
     container_name: task-tracker-app
@@ -98,6 +143,8 @@ services:
       database:
         condition: service_healthy
       kafka:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     environment:
       # Пробрасываем переменные внутрь Spring Boot приложения
@@ -111,6 +158,7 @@ services:
       ADMIN_USERNAME: ${ADMIN_USERNAME}
       ADMIN_PASSWORD_HASH: ${ADMIN_PASSWORD_HASH}
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      JWT_SECRET: ${JWT_SECRET}
     ports:
       - "8080:8080"
     restart: unless-stopped
@@ -118,5 +166,6 @@ services:
 # Инициализируем именованный том для вечного хранения данных
 volumes:
   postgres_data: {}
+  notification_postgres_data: {}
   prometheus_data: {}
   grafana_data: {}

@@ -1,4 +1,5 @@
-package com.getquer.tasktracker.Enums;
+package com.getquer.notification;
+
 
 public enum NotificationType {
     TASK_ASSIGNED,

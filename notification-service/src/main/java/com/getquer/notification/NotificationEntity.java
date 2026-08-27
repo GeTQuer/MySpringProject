@@ -1,7 +1,8 @@
-package com.getquer.tasktracker.Entities;
+package com.getquer.notification;
 
-import com.getquer.tasktracker.Enums.NotificationType;
+import jakarta.persistence.Entity;
 import jakarta.persistence.*;
+
 import lombok.Getter;
 import lombok.Setter;
 
@@ -18,7 +19,12 @@ public class NotificationEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "event_id",nullable = false, unique = true)
+    @Column(
+            name = "event_id",
+            nullable = false,
+            unique = true,
+            updatable = false
+    )
     private UUID eventId;
 
     @Column(name = "recipient_id", nullable = false)
@@ -30,30 +36,27 @@ public class NotificationEntity {
     @Column(name = "task_id")
     private Long taskId;
 
-    @Column(name = "type",nullable = false)
     @Enumerated(EnumType.STRING)
+    @Column(name = "type", nullable = false)
     private NotificationType type;
 
-    @Column(name = "title",nullable = false)
+    @Column(name = "title", nullable = false)
     private String title;
 
-    @Column(name = "message", columnDefinition = "TEXT",nullable = false)
+    @Column(
+            name = "message",
+            nullable = false,
+            columnDefinition = "TEXT"
+    )
     private String message;
 
-    @Column(name = "created_at", nullable = false)
+    @Column(
+            name = "created_at",
+            nullable = false,
+            updatable = false
+    )
     private Instant createdAt;
 
     @Column(name = "read_at")
     private Instant readAt;
-
-    @PrePersist
-    protected void onCreate() {
-        if (eventId == null) {
-            eventId = UUID.randomUUID();
-        }
-
-        if (createdAt == null) {
-            createdAt = Instant.now();
-        }
-    }
 }

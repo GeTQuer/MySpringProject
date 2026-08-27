@@ -2,7 +2,10 @@
 
 [![Java CI](https://github.com/GeTQuer/MySpringProject/actions/workflows/ci.yml/badge.svg)](https://github.com/GeTQuer/MySpringProject/actions/workflows/ci.yml)
 
-Система управления задачами для сотрудников, менеджеров и отделов с ролевым доступом, защитой от конкурентных изменений и наблюдаемостью приложения. Проект представляет собой Spring Boot монолит с интегрированным frontend на Vanilla JavaScript.
+Система управления задачами для сотрудников, менеджеров и отделов с ролевым
+доступом, защитой от конкурентных изменений и наблюдаемостью. Ядро реализовано
+как Spring Boot-приложение с frontend на Vanilla JavaScript, а уведомления
+вынесены в отдельный Spring Boot-сервис, взаимодействующий с ядром через Kafka.
 
 📸 Интерфейс
 
@@ -34,7 +37,8 @@
 - Решение N+1 при пагинации: страница идентификаторов и отдельная загрузка данных через `JOIN FETCH`.
 - Версионирование схемы PostgreSQL через Flyway и проверка mappings через `ddl-auto=validate`.
 - Redis cache для ответов AI-функции, разбивающей задачу на подзадачи.
-- Персональные уведомления о назначении задач: счётчик непрочитанных, чтение одного или всех уведомлений, периодическое обновление и переход к связанной задаче.
+- Персональные уведомления в отдельном сервисе со своей PostgreSQL: счётчик непрочитанных, чтение одного или всех уведомлений, периодическое обновление и переход к связанной задаче.
+- Надёжная доставка событий назначения через transactional outbox, Kafka и идемпотентный consumer по `event_id`.
 - Swagger/OpenAPI для тестирования и документирования REST API.
 - Actuator, Micrometer, Prometheus и Grafana для мониторинга приложения.
 - GitHub Actions: сборка, тесты и проверка Flyway migrations на PostgreSQL.
@@ -49,21 +53,31 @@
 
 ## 🏗 Архитектура
 
-Приложение построено как слоистый Spring Boot монолит:
+Основная бизнес-логика остаётся в слоистом Spring Boot-приложении, а уведомления
+выделены в автономный сервис со своей базой данных:
 
 ```text
-HTTP request
-    ↓
-Spring Security / JWT filter
-    ↓
-Controller → Service → Repository → PostgreSQL
-                 ↓
-          TaskAccessPolicy
+Browser ──JWT──> Task Tracker API ──> PostgreSQL (tasks + outbox)
+                         │
+                         └── outbox publisher ──> Kafka: task-events
+                                                     │
+Browser ──JWT──> Notification API <───────────────────┘
+                         │
+                         └──> Notification PostgreSQL
 ```
 
 Frontend-файлы находятся в `backend/src/main/resources/static`, REST API разделён по controllers, бизнес-сценарии и транзакционные границы находятся в services, а доступ к данным реализован через Spring Data JPA repositories.
 
-При назначении задачи другому сотруднику `TaskService` создаёт событие назначения, а `NotificationService` сохраняет персональное уведомление в той же транзакции. Frontend периодически запрашивает новые уведомления, показывает toast и позволяет перейти к связанной задаче.
+При назначении задачи `TaskService` сохраняет задачу и событие в outbox в одной
+транзакции. Планировщик публикует неподтверждённые события в Kafka, после чего
+`notification-service` создаёт уведомление в собственной БД. Уникальный
+`event_id` делает повторную доставку безопасной. Frontend обращается к сервису
+на порту `8081`, показывает toast и позволяет перейти к связанной задаче.
+
+```text
+TaskService → outbox_events → OutboxScheduler → Kafka task-events
+    → TaskAssignedEventConsumer → notifications → Notification REST API
+```
 
 ## Структура проекта
 
@@ -73,12 +87,18 @@ backend/src/main/java/com/getquer/tasktracker
 ├── config             # Swagger и GlobalExceptionHandler
 ├── controllers        # REST-контроллеры
 ├── Entities           # JPA-сущности
-├── Enums              # Статусы задач и типы уведомлений
+├── Enums              # Статусы задач и пользователей
 ├── Repositories       # JpaRepository и кастомные запросы
 ├── requestDTO         # Валидируемые DTO для входящих данных
 ├── responseDTO        # DTO для безопасной отправки ответов
 ├── security           # JWT, Spring Security и TaskAccessPolicy
 └── service            # Бизнес-логика и транзакционные границы
+
+notification-service/src/main/java/com/getquer/notification
+├── TaskAssignedEventConsumer  # Kafka consumer
+├── NotificationService        # Чтение и изменение уведомлений
+├── NotificationController     # Защищённый REST API
+└── JwtAuthenticationFilter    # Проверка JWT, выпущенного Task Tracker
 ```
 
 ## Схема БД
@@ -90,9 +110,6 @@ erDiagram
     USER ||--o{ TASK : owns
     USER ||--o{ COMMENT : writes
     TASK ||--o{ COMMENT : contains
-    USER ||--o{ NOTIFICATION : receives
-    USER o|--o{ NOTIFICATION : triggers
-    TASK o|--o{ NOTIFICATION : references
 
     DEPARTMENT {
         Long id PK
@@ -130,19 +147,12 @@ erDiagram
         LocalDateTime updated_at
     }
 
-    NOTIFICATION {
-        Long id PK
-        UUID event_id UK
-        Long recipient_id FK
-        Long actor_id FK
-        Long task_id FK
-        String type
-        String title
-        String message
-        Instant created_at
-        Instant read_at
-    }
 ```
+
+Таблица `notifications` находится в отдельной БД `notification-service`.
+Поля `recipient_id`, `actor_id` и `task_id` являются логическими ссылками на
+данные Task Tracker: внешних ключей между разными базами нет. В БД ядра остаётся
+`outbox_events`, обеспечивающая надёжную публикацию событий.
 
 ## 🛠 Стек технологий
 
@@ -154,6 +164,7 @@ erDiagram
 - Hibernate
 - Maven
 - Redis
+- Apache Kafka и transactional outbox
 - Flyway
 - Spring Boot Actuator и Micrometer
 - Prometheus и Grafana
@@ -189,6 +200,11 @@ erDiagram
    GEMINI_API_KEY=your_api_key
    ADMIN_USERNAME=admin
    ADMIN_PASSWORD_HASH=your_bcrypt_hash
+   JWT_SECRET=replace_with_a_long_random_secret
+   NOTIFICATION_DB_NAME=notifications
+   NOTIFICATION_DB_USERNAME=notifications
+   NOTIFICATION_DB_PASSWORD=your_notification_db_password
+   CORS_ALLOWED_ORIGINS=http://localhost:8080,http://127.0.0.1:8080
    GRAFANA_ADMIN_USER=admin
    GRAFANA_ADMIN_PASSWORD=your_grafana_password
    ```
@@ -206,7 +222,8 @@ erDiagram
    docker compose down
    ```
 
-Команда `docker compose down -v` дополнительно удалит данные из named volumes PostgreSQL, Prometheus и Grafana.
+Команда `docker compose down -v` дополнительно удалит данные обеих PostgreSQL,
+Prometheus и Grafana.
 
 ## 🔭 Мониторинг
 
@@ -216,15 +233,21 @@ erDiagram
 |---|---|---|
 | Actuator Health | http://localhost:8080/actuator/health | Состояние Spring Boot приложения |
 | Prometheus metrics | http://localhost:8080/actuator/prometheus | Метрики в формате Prometheus |
+| Notification Health | http://localhost:8081/actuator/health | Состояние сервиса уведомлений |
+| Notification metrics | http://localhost:8081/actuator/prometheus | Метрики сервиса уведомлений |
 | Prometheus | http://localhost:9090 | Запросы PromQL и состояние target |
 | Grafana | http://localhost:3000 | Dashboards и визуализация |
 
-Prometheus получает метрики с `app:8080/actuator/prometheus` внутри сети Compose. Для ручного подключения Grafana добавьте data source типа Prometheus с URL `http://prometheus:9090`; логин и пароль Grafana берутся из `.env`.
+Prometheus получает метрики с `app:8080` и `notification-service:8081` внутри
+сети Compose. Для ручного подключения Grafana добавьте data source типа
+Prometheus с URL `http://prometheus:9090`; логин и пароль Grafana берутся из
+`.env`.
 
 Проверка target в Prometheus:
 
 ```promql
 up{job="task-tracker"}
+up{job="notification-service"}
 ```
 
 Значение `1` означает, что Prometheus успешно получает метрики приложения.
@@ -236,9 +259,15 @@ up{job="task-tracker"}
 ```bash
 cd backend
 ./mvnw clean verify
+
+cd ../notification-service
+./mvnw clean verify
 ```
 
-Workflow [Java CI with Maven and PostgreSQL](https://github.com/GeTQuer/MySpringProject/actions/workflows/ci.yml) запускается для pull requests и изменений в `master/main`. GitHub Actions поднимает PostgreSQL, запускает Maven tests и проверяет Flyway migrations; required status check `build-and-test` должен пройти до merge.
+Workflow [Java CI with Maven and PostgreSQL](https://github.com/GeTQuer/MySpringProject/actions/workflows/ci.yml)
+запускается для pull requests и изменений в `master/main`. Один required status
+check `build-and-test` проверяет Flyway-миграции и тесты Task Tracker, а затем
+собирает и тестирует notification-service.
 
 ## 📄 API и интерфейс
 
@@ -252,9 +281,12 @@ Workflow [Java CI with Maven and PostgreSQL](https://github.com/GeTQuer/MySpring
 
 | Метод | Endpoint | Назначение |
 |---|---|---|
-| `GET` | `/api/notifications?page=0&size=20` | Получить страницу уведомлений |
-| `GET` | `/api/notifications/unread-count` | Получить количество непрочитанных |
-| `PATCH` | `/api/notifications/{id}/read` | Отметить одно уведомление прочитанным |
-| `PATCH` | `/api/notifications/read-all` | Отметить все уведомления прочитанными |
+| `GET` | `http://localhost:8081/api/notifications?page=0&size=20` | Получить страницу уведомлений |
+| `GET` | `http://localhost:8081/api/notifications/unread-count` | Получить количество непрочитанных |
+| `PATCH` | `http://localhost:8081/api/notifications/{id}/read` | Отметить одно уведомление прочитанным |
+| `PATCH` | `http://localhost:8081/api/notifications/read-all` | Отметить все уведомления прочитанными |
 
-Центр уведомлений встроен в страницу задач и административную панель. Он обновляется автоматически, показывает toast для новых назначений и подсвечивает связанную задачу после перехода.
+Центр уведомлений встроен в страницу задач и административную панель. Он
+обновляется автоматически, показывает toast для новых назначений и подсвечивает
+связанную задачу после перехода. При клике frontend отправляет `PATCH` в
+notification-service; признак прочтения хранится как время в поле `read_at`.

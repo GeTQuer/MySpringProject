@@ -1,21 +1,18 @@
-package com.getquer.tasktracker.Repositories;
+package com.getquer.notification;
 
-
-import com.getquer.tasktracker.Entities.NotificationEntity;
-import org.springframework.data.repository.query.Param;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
-
+import java.util.UUID;
 import java.time.Instant;
 import java.util.Optional;
 
 @Repository
-public interface NotificationRepository extends JpaRepository<NotificationEntity, Long> {
-
+public interface NotificationRepository extends JpaRepository<NotificationEntity,Long> {
     Page<NotificationEntity> findByRecipientId(
             Long id,
             Pageable pageable
@@ -25,7 +22,7 @@ public interface NotificationRepository extends JpaRepository<NotificationEntity
 
     Optional<NotificationEntity> findByIdAndRecipientId(Long id, Long recipientId);
 
-
+    boolean existsByEventId(UUID eventId);
 
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query(

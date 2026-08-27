@@ -29,7 +29,6 @@ public class TaskService {
     private final TaskRepository taskRepository;
     private final UserRepository userRepository;
     private final TaskAccessPolicy taskAccessPolicy;
-    private final NotificationService notificationService;
     private final OutboxService outboxService;
 
 
@@ -112,7 +111,6 @@ public class TaskService {
                     Instant.now()
             );
             outboxService.saveTaskAssignedEvent(event);
-            notificationService.createNotification(event);
         }
 
 

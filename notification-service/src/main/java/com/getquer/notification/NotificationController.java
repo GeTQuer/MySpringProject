@@ -1,30 +1,36 @@
-package com.getquer.tasktracker.controllers;
+package com.getquer.notification;
 
-import com.getquer.tasktracker.responseDTO.NotificationDTO;
-import com.getquer.tasktracker.service.NotificationService;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/notifications")
+@RequiredArgsConstructor
+@Validated
 public class NotificationController {
-    private final NotificationService notificationService;
 
-    public NotificationController(NotificationService notificationService) {
-        this.notificationService = notificationService;
-    }
+    private final NotificationService notificationService;
 
     @GetMapping
     public ResponseEntity<Page<NotificationDTO>> getNotifications(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(defaultValue = "0") @Min(0) int page,
+            @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size,
             Authentication authentication
     ) {
         return ResponseEntity.ok(
                 notificationService.getNotifications(
-                        authentication.getName(),
+                        recipientId(authentication),
                         page,
                         size
                 )
@@ -37,7 +43,7 @@ public class NotificationController {
     ) {
         return ResponseEntity.ok(
                 notificationService.getUnreadCount(
-                        authentication.getName()
+                        recipientId(authentication)
                 )
         );
     }
@@ -50,7 +56,7 @@ public class NotificationController {
         return ResponseEntity.ok(
                 notificationService.markAsRead(
                         id,
-                        authentication.getName()
+                        recipientId(authentication)
                 )
         );
     }
@@ -60,11 +66,13 @@ public class NotificationController {
             Authentication authentication
     ) {
         notificationService.markAllAsRead(
-                authentication.getName()
+                recipientId(authentication)
         );
 
         return ResponseEntity.noContent().build();
     }
 
-
+    private Long recipientId(Authentication authentication) {
+        return (Long) authentication.getPrincipal();
+    }
 }

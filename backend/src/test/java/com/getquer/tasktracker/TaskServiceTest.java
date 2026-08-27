@@ -11,7 +11,6 @@ import com.getquer.tasktracker.Repositories.TaskRepository;
 import com.getquer.tasktracker.Repositories.UserRepository;
 import com.getquer.tasktracker.requestDTO.TaskCreateRequest;
 import com.getquer.tasktracker.security.TaskAccessPolicy;
-import com.getquer.tasktracker.service.NotificationService;
 import com.getquer.tasktracker.service.OutboxService;
 import com.getquer.tasktracker.service.TaskService;
 import com.getquer.tasktracker.util.TaskTestDataMother;
@@ -43,8 +42,6 @@ public class TaskServiceTest {
             private TaskService taskService;
     @Mock
             private UserRepository userRepository;
-    @Mock
-            private NotificationService notificationService;
     @Mock
             private OutboxService outboxService;
     @Spy
@@ -101,9 +98,6 @@ public class TaskServiceTest {
             assertNotNull(result);
             assertEquals(inputDTO.assignedUsername(), result.assignedUsername());
             Mockito.verify(taskRepository, Mockito.times(1)).save(Mockito.any(TaskEntity.class));
-            Mockito.verify(notificationService).createNotification(
-                    Mockito.any(TaskAssignedEventV1.class)
-            );
             Mockito.verify(outboxService).saveTaskAssignedEvent(
                     Mockito.any(TaskAssignedEventV1.class)
             );
@@ -177,9 +171,6 @@ public class TaskServiceTest {
             assertNotNull(result);
             assertEquals(inputDTO.assignedUsername(), result.assignedUsername());
             Mockito.verify(taskRepository, Mockito.times(1)).save(Mockito.any(TaskEntity.class));
-            Mockito.verify(notificationService).createNotification(
-                    Mockito.any(TaskAssignedEventV1.class)
-            );
             Mockito.verify(outboxService).saveTaskAssignedEvent(
                     Mockito.any(TaskAssignedEventV1.class)
             );
