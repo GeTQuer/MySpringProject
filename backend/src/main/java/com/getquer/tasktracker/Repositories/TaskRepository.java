@@ -86,7 +86,11 @@ public interface TaskRepository extends JpaRepository<TaskEntity, Long>
     )
     Page<Long> findAllTasksByDepartmentIdAndStatus(@Param("id") Long id, @Param("status") TaskStatus status, Pageable pageable);
 
-
+    List<TaskEntity> findByDepartmentIdAndCreatedAtGreaterThanEqualAndCreatedAtLessThan(
+            Long departmentId,
+            LocalDateTime from,
+            LocalDateTime toExclusive
+    );
 
 
 
