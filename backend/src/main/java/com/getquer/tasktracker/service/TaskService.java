@@ -2,6 +2,7 @@ package com.getquer.tasktracker.service;
 
 import com.getquer.tasktracker.Entities.UserEntity;
 import com.getquer.tasktracker.Repositories.UserRepository;
+import com.getquer.tasktracker.events.TaskAssignedApplicationEvent;
 import com.getquer.tasktracker.requestDTO.TaskCreateRequest;
 import com.getquer.tasktracker.responseDTO.TaskDTO;
 import com.getquer.tasktracker.Entities.TaskEntity;
@@ -10,6 +11,7 @@ import com.getquer.tasktracker.Enums.TaskStatus;
 import com.getquer.tasktracker.security.TaskAccessPolicy;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.*;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.security.access.AccessDeniedException;
@@ -29,8 +31,7 @@ public class TaskService {
     private final TaskRepository taskRepository;
     private final UserRepository userRepository;
     private final TaskAccessPolicy taskAccessPolicy;
-    private final OutboxService outboxService;
-
+    private final ApplicationEventPublisher publisher;
 
 
     private Page<TaskDTO> convertToTaskPage(Page<Long> idPage, Pageable pageable) {
@@ -110,7 +111,7 @@ public class TaskService {
                     savedTask.getContent(),
                     Instant.now()
             );
-            outboxService.saveTaskAssignedEvent(event);
+            publisher.publishEvent(new TaskAssignedApplicationEvent(this,event));
         }
 
 

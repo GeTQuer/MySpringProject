@@ -2,7 +2,7 @@ package com.getquer.tasktracker;
 
 
 import com.getquer.tasktracker.Enums.TaskStatus;
-import com.getquer.tasktracker.events.TaskAssignedEventV1;
+import com.getquer.tasktracker.events.TaskAssignedApplicationEvent;
 import com.getquer.tasktracker.responseDTO.TaskDTO;
 import com.getquer.tasktracker.Entities.DepartmentEntity;
 import com.getquer.tasktracker.Entities.TaskEntity;
@@ -11,7 +11,7 @@ import com.getquer.tasktracker.Repositories.TaskRepository;
 import com.getquer.tasktracker.Repositories.UserRepository;
 import com.getquer.tasktracker.requestDTO.TaskCreateRequest;
 import com.getquer.tasktracker.security.TaskAccessPolicy;
-import com.getquer.tasktracker.service.OutboxService;
+import org.springframework.context.ApplicationEventPublisher;
 import com.getquer.tasktracker.service.TaskService;
 import com.getquer.tasktracker.util.TaskTestDataMother;
 import jakarta.persistence.EntityNotFoundException;
@@ -43,7 +43,7 @@ public class TaskServiceTest {
     @Mock
             private UserRepository userRepository;
     @Mock
-            private OutboxService outboxService;
+            private ApplicationEventPublisher publisher;
     @Spy
             private TaskAccessPolicy taskAccessPolicy = new TaskAccessPolicy();
 
@@ -98,8 +98,8 @@ public class TaskServiceTest {
             assertNotNull(result);
             assertEquals(inputDTO.assignedUsername(), result.assignedUsername());
             Mockito.verify(taskRepository, Mockito.times(1)).save(Mockito.any(TaskEntity.class));
-            Mockito.verify(outboxService).saveTaskAssignedEvent(
-                    Mockito.any(TaskAssignedEventV1.class)
+            Mockito.verify(publisher).publishEvent(
+                    Mockito.any(TaskAssignedApplicationEvent.class)
             );
         }
 
@@ -171,8 +171,8 @@ public class TaskServiceTest {
             assertNotNull(result);
             assertEquals(inputDTO.assignedUsername(), result.assignedUsername());
             Mockito.verify(taskRepository, Mockito.times(1)).save(Mockito.any(TaskEntity.class));
-            Mockito.verify(outboxService).saveTaskAssignedEvent(
-                    Mockito.any(TaskAssignedEventV1.class)
+            Mockito.verify(publisher).publishEvent(
+                    Mockito.any(TaskAssignedApplicationEvent.class)
             );
         }
 
