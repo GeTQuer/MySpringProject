@@ -28,4 +28,18 @@ public interface ReportJobRepositorty extends JpaRepository<ReportJobEntity, UUI
             ReportStatus status,
             Instant now
     );
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+    SELECT j FROM ReportJobEntity j
+    WHERE j.finishedAt IS NULL
+      AND (
+          (j.status = 'PENDING' AND j.createdAt < :cutoff)
+          OR
+          (j.status = 'PROCESSING' AND j.startedAt < :cutoff)
+      )
+    """)
+    List<ReportJobEntity> findStalledReports(
+            @Param("cutoff") Instant cutoff
+    );
 }

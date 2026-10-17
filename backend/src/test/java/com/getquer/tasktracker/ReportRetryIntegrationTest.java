@@ -28,14 +28,20 @@ import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.never;
 
 @SpringBootTest(properties = {
         "reports.retry.initial-delay-ms=3600000",
-        "reports.retry.fixed-delay-ms=3600000"
+        "reports.retry.fixed-delay-ms=3600000",
+        "reports.recovery.initial-delay-ms=3600000",
+        "reports.recovery.fixed-delay-ms=3600000"
 })
 class ReportRetryIntegrationTest {
     @Autowired ReportJobRepositorty repository;
     @Autowired ReportRetryScheduler scheduler;
+    @Autowired ReportRecoveryScheduler recoveryScheduler;
     @Autowired ApplicationEventPublisher publisher;
     @Autowired PlatformTransactionManager transactionManager;
     @MockitoSpyBean ReportService service;
@@ -107,7 +113,83 @@ class ReportRetryIntegrationTest {
         assertEquals(ReportStatus.COMPLETED, repository.findById(jobId).orElseThrow().getStatus());
     }
 
+    @Test
+    void recoveryRestartsPendingJobWhoseEventWasLost() throws Exception {
+        createJob(Instant.now().minusSeconds(660));
+        stubReport();
+
+        recoveryScheduler.recoverStalledReports();
+
+        var result = awaitStatus(ReportStatus.COMPLETED);
+        assertEquals(1, result.getAttemptCount());
+        assertNotNull(result.getResultJson());
+    }
+
+    @Test
+    void recoveryReplacesStalledAttemptAndRejectsItsLateResult() throws Exception {
+        createJob();
+        var oldAttempt = service.tryStartAttempt(jobId).orElseThrow();
+        var job = repository.findById(jobId).orElseThrow();
+        job.setStartedAt(Instant.now().minusSeconds(660));
+        repository.saveAndFlush(job);
+        stubReport();
+
+        recoveryScheduler.recoverStalledReports();
+
+        var result = awaitStatus(ReportStatus.COMPLETED);
+        assertEquals(2, result.getAttemptCount());
+        assertNotEquals(oldAttempt, result.getAttemptId());
+        service.markFailed(jobId, oldAttempt, new IllegalStateException("late old attempt"));
+        assertEquals(ReportStatus.COMPLETED, repository.findById(jobId).orElseThrow().getStatus());
+    }
+
+    @Test
+    void recoveryDoesNotRestartFreshOrCompletedJobs() {
+        createJob();
+        recoveryScheduler.recoverStalledReports();
+        assertEquals(ReportStatus.PENDING, repository.findById(jobId).orElseThrow().getStatus());
+
+        var job = repository.findById(jobId).orElseThrow();
+        job.setStatus(ReportStatus.COMPLETED);
+        job.setCreatedAt(Instant.now().minusSeconds(660));
+        job.setStartedAt(Instant.now().minusSeconds(660));
+        job.setFinishedAt(Instant.now());
+        repository.saveAndFlush(job);
+        recoveryScheduler.recoverStalledReports();
+        assertEquals(ReportStatus.COMPLETED, repository.findById(jobId).orElseThrow().getStatus());
+        verify(service, never()).tryStartAttempt(jobId);
+    }
+
+    @Test
+    void recoveryRespectsExhaustedAttemptLimit() throws Exception {
+        createJob();
+        var job = repository.findById(jobId).orElseThrow();
+        job.setStatus(ReportStatus.PROCESSING);
+        job.setAttemptCount(5);
+        job.setAttemptId(UUID.randomUUID());
+        job.setStartedAt(Instant.now().minusSeconds(660));
+        repository.saveAndFlush(job);
+
+        recoveryScheduler.recoverStalledReports();
+
+        var result = awaitStatus(ReportStatus.FAILED);
+        assertEquals(5, result.getAttemptCount());
+        assertNull(result.getNextAttemptAt());
+        verify(service, never()).buildReport(jobId);
+    }
+
+    private void stubReport() {
+        doReturn(new DepartmentReportDTO(3L, "IT", LocalDate.of(2026, 1, 1),
+                LocalDate.of(2026, 2, 1), Instant.now(),
+                new TaskStatisticsDTO(0, 0, 0, 0, 0), List.of()))
+                .when(service).buildReport(jobId);
+    }
+
     private void createJob() {
+        createJob(Instant.now());
+    }
+
+    private void createJob(Instant createdAt) {
         var job = new ReportJobEntity();
         jobId = UUID.randomUUID();
         job.setUuid(jobId);
@@ -115,7 +197,7 @@ class ReportRetryIntegrationTest {
         job.setDepartmentId(3L);
         job.setPeriodFrom(LocalDate.of(2026, 1, 1));
         job.setPeriodToExclusive(LocalDate.of(2026, 2, 1));
-        job.setCreatedAt(Instant.now());
+        job.setCreatedAt(createdAt);
         job.setStatus(ReportStatus.PENDING);
         repository.saveAndFlush(job);
     }
